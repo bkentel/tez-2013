@@ -34,25 +34,33 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="libs.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="libs.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)build\bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)build\bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)\source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -61,14 +69,16 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)\source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -78,6 +88,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="source\assert.hpp" />
+    <ClInclude Include="source\callback.hpp" />
+    <ClInclude Include="source\concurrent_queue.hpp" />
+    <ClInclude Include="source\config.hpp" />
+    <ClInclude Include="source\ime.hpp" />
+    <ClInclude Include="source\pch.hpp" />
+    <ClInclude Include="source\platform\com.hpp" />
+    <ClInclude Include="source\platform\direct2d.hpp" />
+    <ClInclude Include="source\platform\ime_windows.hpp" />
+    <ClInclude Include="source\platform\platform.hpp" />
+    <ClInclude Include="source\platform\window_windows.hpp" />
+    <ClInclude Include="source\scope_exit.hpp" />
+    <ClInclude Include="source\types.hpp" />
+    <ClInclude Include="source\window.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\ime.cpp" />
+    <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\platform\direct2d.cpp" />
+    <ClCompile Include="source\platform\window_windows.cpp" />
+    <ClCompile Include="source\window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

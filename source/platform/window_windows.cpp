@@ -10,12 +10,38 @@
 using window = bklib::platform_window::impl_t_;
 
 //------------------------------------------------------------------------------
-concurrent_queue<window::invocable> window::work_queue_ {};
-concurrent_queue<window::invocable> window::event_queue_ {};
+bklib::concurrent_queue<window::invocable> window::work_queue_ {};
+bklib::concurrent_queue<window::invocable> window::event_queue_ {};
 bool                                window::running_ {false};
 DWORD                               window::thread_id_ {0};
-std::unique_ptr<bklib::impl::ime_manager> window::ime_manager_;
+//std::unique_ptr<bklib::impl::ime_manager> window::ime_manager_;
 //------------------------------------------------------------------------------
+
+struct is_not_ok {
+    bool operator()(HRESULT const hr) const BK_NOEXCEPT {
+        return hr != S_OK;
+    }
+};
+
+struct api_error : virtual std::exception, virtual boost::exception {};
+
+#define BK_THROW_API_IF(api, value, cond) \
+do { \
+    bool const pred = cond(value); \
+    if (pred) { \
+        BOOST_THROW_EXCEPTION(api_error {} \
+            << boost::errinfo_api_function(#api) \
+            << boost::errinfo_errno(value) \
+        ); \
+    } \
+} while (false)
+
+#define BK_THROW_API(name, value) \
+BOOST_THROW_EXCEPTION(api_error {} \
+    << boost::errinfo_api_function(#name) \
+    << boost::errinfo_errno(value) \
+)
+
 namespace {
     //--------------------------------------------------------------------------
     std::once_flag once_flag; //used for initialization
@@ -26,10 +52,8 @@ namespace {
         auto const result = ::GetWindowLongPtrW(hWnd, GWLP_USERDATA);
     
         if (result == 0) {
-            auto const err_num = ::GetLastError();
-            if (err_num != 0) {
-                throw "TODO";
-            }
+            BK_THROW_API_IF(GetWindowLongPtrW,
+                ::GetLastError(), std::bind1st(std::not_equal_to<>, 0));
         }
 
         return reinterpret_cast<T*>(result);
@@ -42,10 +66,8 @@ namespace {
         auto const result = ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, value);
 
         if (result == 0) {
-            auto const err_num = ::GetLastError();
-            if (err_num != 0) {
-                throw "TODO";
-            }
+            BK_THROW_API_IF(SetWindowLongPtrW,
+                ::GetLastError(), std::bind1st(std::not_equal_to<>, 0));
         }
 
         return result;
@@ -57,8 +79,7 @@ void window::push_job_(invocable job) {
 
     auto const result = ::PostThreadMessageW(thread_id_, WM_NULL, 0, 0);
     if (result == 0) {
-        auto const errn = ::GetLastError();
-        BK_DEBUG_BREAK();
+        BK_THROW_API(PostThreadMessageW, ::GetLastError());
     }
 }
 //------------------------------------------------------------------------------
@@ -71,14 +92,10 @@ void window::init_() {
         ::HeapSetInformation(nullptr, HeapEnableTerminationOnCorruption, nullptr, 0);
 
         HRESULT const hr = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        if (S_OK != hr) {
-            throw "TODO";
-        }
+        BK_THROW_API_IF(CoInitializeEx, hr, is_not_ok());       
 
         BOOL const result = ::ImmDisableIME(static_cast<DWORD>(-1));
-        if (FALSE == result) {
-            throw "TODO";
-        }
+        BK_THROW_API_IF(ImmDisableIME, hr, is_not_ok());        
 
         std::thread window_thread(window::main_);
         thread_id_ = ::GetThreadId(window_thread.native_handle());
@@ -95,7 +112,7 @@ void window::main_() {
     //enusure the thread has a message queue before continuing
     ::PeekMessageW(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
 
-    ime_manager_ = std::make_unique<impl::ime_manager>();
+    //ime_manager_ = std::make_unique<impl::ime_manager>(); //TODO
 
     running_ = true;
     BK_SCOPE_EXIT({running_ = false;});
@@ -111,7 +128,7 @@ void window::main_() {
         //OK
         case 1:
             if (msg.message == BK_WM_ASSOCIATE_TSF) {
-                ime_manager_->associate(msg.hwnd);
+                //ime_manager_->associate(msg.hwnd); //TODO
             }
 
             ::TranslateMessage(&msg);
@@ -169,6 +186,10 @@ HWND window::create_window_(window* win) {
             win
         );
         
+        if (result == nullptr) {
+            BK_THROW_API(CreateWindowExW, ::GetLastError());
+        }
+
         ::PostMessageW(result, BK_WM_ASSOCIATE_TSF, reinterpret_cast<WPARAM>(result), 0);
 
         promise_window.set_value(result);
@@ -235,9 +256,8 @@ LRESULT window::local_wnd_proc_(UINT const uMsg, WPARAM const wParam, LPARAM con
     return ::DefWindowProcW(window_.get(), uMsg, wParam, lParam);
 }
 //------------------------------------------------------------------------------
-window::impl_t_(bklib::platform_window& pw)
-    : pw_ {pw}
-    , window_ {nullptr}
+window::impl_t_()
+    : window_ {nullptr}
 {
     auto const result = create_window_(this);
     BK_ASSERT(result == window_.get());

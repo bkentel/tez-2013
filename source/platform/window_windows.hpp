@@ -1,11 +1,11 @@
 #pragma once
 
-#include "platform.hpp";
+#include "platform.hpp"
 #include "concurrent_queue.hpp"
 #include "window.hpp"
 #include "ime_windows.hpp"
 
-namespace bklib { namespace win {
+namespace bklib {
 
 struct hwnd_deleter {
     typedef HWND pointer;
@@ -23,20 +23,17 @@ class platform_window::impl_t_ {
     impl_t_(impl_t_ const&) = delete;
     impl_t_& operator=(impl_t_ const&) = delete;
 public:
-    using on_create = platform_window::on_create;
+    using invocable        = std::function<void()>;
+    using on_create        = platform_window::on_create;
     using on_mouse_move_to = platform_window::on_mouse_move_to;
 
     impl_t_();
 
     void shutdown();
 
-    HWND handle() const BK_NOEXCEPT {
-        return window_.get();
-    }
+    HWND handle() const BK_NOEXCEPT { return window_.get(); }
 
-    bool is_running() const BK_NOEXCEPT {
-        return running_;
-    }
+    bool is_running() const BK_NOEXCEPT { return running_; }
 
     void do_events();
 
@@ -50,13 +47,13 @@ public:
             });            
         };
 
-        ime_manager_->listen(ime_candidate_list::on_update {func});
+        //ime_manager_->listen(ime_candidate_list::on_update {func});
     }
 private:
     window_handle window_;
 
     LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);   
-
+private:
     static LRESULT CALLBACK wnd_proc_(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static HWND create_window_(impl_t_* win);
 
@@ -70,7 +67,7 @@ private:
     static concurrent_queue<invocable> event_queue_;
     static bool running_;
     static DWORD thread_id_;
-    static std::unique_ptr<impl::ime_manager> ime_manager_;
+    //static std::unique_ptr<impl::ime_manager> ime_manager_;
 };
 
-}} //namespace bklib::win
+} //namespace bklib

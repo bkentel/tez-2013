@@ -15,3 +15,6 @@ namespace bklib {
 #endif
     using invocable = std::function<void()>;
 } //namespace bklib
+
+//TODO
+#define BK_UNUSED(x) (void)(x)

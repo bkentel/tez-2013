@@ -63,6 +63,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <boost/exception/all.hpp>
+
 #include "config.hpp"
 
 #include "platform/platform.hpp"
