@@ -2,6 +2,7 @@
 
 #include "window_windows.hpp"
 #include "ime_windows.hpp"
+#include "com.hpp"
 
 #pragma comment(lib, "Imm32.lib")
 
@@ -16,7 +17,6 @@ bool                                window::running_ {false};
 DWORD                               window::thread_id_ {0};
 //std::unique_ptr<bklib::impl::ime_manager> window::ime_manager_;
 //------------------------------------------------------------------------------
-
 struct is_not_ok {
     bool operator()(HRESULT const hr) const BK_NOEXCEPT {
         return hr != S_OK;
@@ -26,15 +26,12 @@ struct is_not_ok {
 struct api_error : virtual std::exception, virtual boost::exception {};
 
 #define BK_THROW_API_IF(api, value, cond) \
-do { \
-    bool const pred = cond(value); \
-    if (pred) { \
-        BOOST_THROW_EXCEPTION(api_error {} \
-            << boost::errinfo_api_function(#api) \
-            << boost::errinfo_errno(value) \
-        ); \
-    } \
-} while (false)
+for (auto const pred = cond(value); pred;) { \
+    BOOST_THROW_EXCEPTION(api_error {} \
+        << boost::errinfo_api_function(#api) \
+        << boost::errinfo_errno(value) \
+    ); \
+} []{}
 
 #define BK_THROW_API(name, value) \
 BOOST_THROW_EXCEPTION(api_error {} \
@@ -53,7 +50,7 @@ namespace {
     
         if (result == 0) {
             BK_THROW_API_IF(GetWindowLongPtrW,
-                ::GetLastError(), std::bind1st(std::not_equal_to<>, 0));
+                ::GetLastError(), std::bind1st(std::not_equal_to<DWORD>{}, 0));
         }
 
         return reinterpret_cast<T*>(result);
@@ -67,7 +64,7 @@ namespace {
 
         if (result == 0) {
             BK_THROW_API_IF(SetWindowLongPtrW,
-                ::GetLastError(), std::bind1st(std::not_equal_to<>, 0));
+                ::GetLastError(), std::bind1st(std::not_equal_to<DWORD>{}, 0));
         }
 
         return result;
@@ -91,11 +88,8 @@ void window::init_() {
     std::call_once(once_flag, [] {
         ::HeapSetInformation(nullptr, HeapEnableTerminationOnCorruption, nullptr, 0);
 
-        HRESULT const hr = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        BK_THROW_API_IF(CoInitializeEx, hr, is_not_ok());       
-
-        BOOL const result = ::ImmDisableIME(static_cast<DWORD>(-1));
-        BK_THROW_API_IF(ImmDisableIME, hr, is_not_ok());        
+        BK_THROW_ON_COM_ERROR(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+        BK_THROW_API_EQUAL(::ImmDisableIME(static_cast<DWORD>(-1)), FALSE);
 
         std::thread window_thread(window::main_);
         thread_id_ = ::GetThreadId(window_thread.native_handle());
@@ -107,7 +101,7 @@ void window::init_() {
 //------------------------------------------------------------------------------
 void window::main_() {
     MSG msg {0};
-    HRESULT const hr = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    BK_THROW_ON_COM_ERROR(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
 
     //enusure the thread has a message queue before continuing
     ::PeekMessageW(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
@@ -277,3 +271,18 @@ void window::shutdown() {
         ::PostQuitMessage(0);
     });
 }
+
+
+
+void window::listen(bklib::platform_window::on_create callback) {}
+void window::listen(bklib::platform_window::on_close  callback) {}
+void window::listen(bklib::platform_window::on_resize callback) {}
+
+void window::listen(bklib::mouse::on_enter   callback) {}
+void window::listen(bklib::mouse::on_exit    callback) {}
+void window::listen(bklib::mouse::on_move    callback) {}
+void window::listen(bklib::mouse::on_move_to callback) {}
+
+void window::listen(bklib::ime_candidate_list::on_begin  callback) {}
+void window::listen(bklib::ime_candidate_list::on_update callback) {}
+void window::listen(bklib::ime_candidate_list::on_end    callback) {}

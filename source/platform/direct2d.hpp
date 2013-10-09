@@ -12,7 +12,7 @@
 #include "com.hpp"
 
 namespace bklib {
-namespace impl {
+namespace win {
 
 class d2d_renderer {
 public:
@@ -47,5 +47,5 @@ private:
     com_ptr<ID2D1SolidColorBrush> brush_;
 };
 
-} //impl
+} //win
 } //tez

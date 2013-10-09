@@ -82,21 +82,21 @@ public:
     ime_candidate_list(ime_candidate_list const&) = default;
     ime_candidate_list& operator=(ime_candidate_list const&) = default;
 
-    strings_t::const_iterator begin() const { return cbegin(); }
-    strings_t::const_iterator end() const { return cend(); }
+    //strings_t::const_iterator begin() const { return cbegin(); }
+    //strings_t::const_iterator end() const { return cend(); }
 
-    strings_t::const_iterator cbegin() const;
-    strings_t::const_iterator cend() const;
+    //strings_t::const_iterator cbegin() const;
+    //strings_t::const_iterator cend() const;
 
-    strings_t::const_iterator page_begin() const;
-    strings_t::const_iterator page_end() const;
+    //strings_t::const_iterator page_begin() const;
+    //strings_t::const_iterator page_end() const;
 
-    size_t size() const;
-    size_t selection() const;
+    //size_t size() const;
+    //size_t selection() const;
 
-    size_t page_selection() const;
+    //size_t page_selection() const;
 
-    void lock();
+    //void lock();
     void unlock();
 
     BK_DECLARE_EVENT(on_begin,  void ());

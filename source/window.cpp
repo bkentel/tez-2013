@@ -6,17 +6,15 @@
 #endif
 
 using pw = bklib::platform_window;
+using mouse = bklib::mouse;
 
 pw::~platform_window() {
-
 }
 
 pw::platform_window(
-    platform_string title,
-    unsigned width,
-    unsigned height
+    bklib::platform_string title
 )
-: impl_ {new impl_t_ {*this}}
+    : impl_ {new impl_t_ {}}
 {
 }
 
@@ -24,14 +22,34 @@ void pw::do_events() {
     impl_->do_events();
 }
 
-void pw::listen(pw::on_create callback) {
+
+void pw::listen(on_create callback) {
     impl_->listen(callback);
 }
-
-void pw::listen(pw::on_mouse_move_to callback) {
+void pw::listen(on_close  callback) {
     impl_->listen(callback);
 }
-
+void pw::listen(on_resize callback) {
+    impl_->listen(callback);
+}
+void pw::listen(mouse::on_enter callback) {
+    impl_->listen(callback);
+}
+void pw::listen(mouse::on_exit callback) {
+    impl_->listen(callback);
+}
+void pw::listen(mouse::on_move callback) {
+    impl_->listen(callback);
+}
+void pw::listen(mouse::on_move_to callback) {
+    impl_->listen(callback);
+}
+void pw::listen(bklib::ime_candidate_list::on_begin callback) {
+    impl_->listen(callback);
+}
 void pw::listen(bklib::ime_candidate_list::on_update callback) {
+    impl_->listen(callback);
+}
+void pw::listen(bklib::ime_candidate_list::on_end callback) {
     impl_->listen(callback);
 }

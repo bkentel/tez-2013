@@ -24,8 +24,6 @@ class platform_window::impl_t_ {
     impl_t_& operator=(impl_t_ const&) = delete;
 public:
     using invocable        = std::function<void()>;
-    using on_create        = platform_window::on_create;
-    using on_mouse_move_to = platform_window::on_mouse_move_to;
 
     impl_t_();
 
@@ -37,20 +35,24 @@ public:
 
     void do_events();
 
-    void listen(on_create callback) {}
-    void listen(on_mouse_move_to callback) {}
+    void listen(on_create callback);
+    void listen(on_close  callback);
+    void listen(on_resize callback);
 
-    void listen(ime_candidate_list::on_update callback) {
-        auto func = [=](ime_candidate_list cl, ime_candidate_list::update_type type) {
-            push_event_([=] {
-                callback(cl, type);
-            });            
-        };
+    void listen(mouse::on_enter   callback);
+    void listen(mouse::on_exit    callback);
+    void listen(mouse::on_move    callback);
+    void listen(mouse::on_move_to callback);
 
-        //ime_manager_->listen(ime_candidate_list::on_update {func});
-    }
+    void listen(ime_candidate_list::on_begin  callback);
+    void listen(ime_candidate_list::on_update callback);
+    void listen(ime_candidate_list::on_end    callback);
 private:
     window_handle window_;
+
+    on_create on_create_;
+    on_close  on_close_;
+    on_resize on_resize_;
 
     LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);   
 private:

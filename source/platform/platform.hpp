@@ -1,5 +1,8 @@
 #pragma once
 
+#include <exception>
+#include <boost/exception/all.hpp>
+
 #include "config.hpp"
 
 #if defined(BK_PLATFORM_WINDOWS)
@@ -9,5 +12,8 @@
 #   include <dwrite.h>
 #   include <wincodec.h>
 #   include <imm.h>
+#   include <Unknwn.h>
+
+    struct platform_error : virtual std::exception, virtual boost::exception {};
 #else
 #endif

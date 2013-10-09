@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="source\platform\com.hpp" />
-    <ClInclude Include="source\platform\direct2d.hpp" />
     <ClInclude Include="source\platform\platform.hpp" />
     <ClInclude Include="source\platform\window_windows.hpp" />
     <ClInclude Include="source\assert.hpp" />
@@ -17,7 +16,6 @@
     <ClInclude Include="source\platform\ime_windows.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\platform\direct2d.cpp" />
     <ClCompile Include="source\platform\window_windows.cpp" />
     <ClCompile Include="source\ime.cpp" />
     <ClCompile Include="source\main.cpp" />

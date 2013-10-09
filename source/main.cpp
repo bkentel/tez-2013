@@ -255,14 +255,14 @@
 
 void main()
 try {
-    bklib::platform_window win {L"Tez", 100, 200};
+    bklib::platform_window win {L"Tez"};
 
     auto on_mouse_move = [&](int x, int y) {
         std::cout << x << ", " << y << std::endl;
     };
 
     win.listen(
-        bklib::platform_window::on_mouse_move_to {on_mouse_move}
+        bklib::mouse::on_move_to {on_mouse_move}
     );
 
     while (true) {

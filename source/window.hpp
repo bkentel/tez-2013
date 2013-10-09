@@ -8,24 +8,39 @@
 
 namespace bklib {
 
+class mouse {
+public:
+    BK_DECLARE_EVENT(on_enter, void(int x, int y));
+    BK_DECLARE_EVENT(on_exit,  void(int x, int y));
+    
+    BK_DECLARE_EVENT(on_move,    void(int dx, int dy));
+    BK_DECLARE_EVENT(on_move_to, void(int dx, int dy));
+};
+
 class platform_window {
 public:
     class impl_t_;
     friend impl_t_;
     
     ~platform_window();
-    platform_window(platform_string title, unsigned width, unsigned height);
+    explicit platform_window(platform_string title);
 
-    using on_create        = callback<struct tag_on_create, void()>;
-    using on_close         = callback<struct tag_on_close, void()>;
-    using on_mouse_move_to = callback<struct tag_on_mouse_move_to, void(int, int)>;
+    BK_DECLARE_EVENT(on_create, void());
+    BK_DECLARE_EVENT(on_close,  void());
+    BK_DECLARE_EVENT(on_resize, void(unsigned w, unsigned h));;
 
     void listen(on_create callback);
-    void listen(on_mouse_move_to callback);
+    void listen(on_close  callback);
+    void listen(on_resize callback);
+
+    void listen(mouse::on_enter   callback);
+    void listen(mouse::on_exit    callback);
+    void listen(mouse::on_move    callback);
+    void listen(mouse::on_move_to callback);
     
-    void listen(ime_candidate_list::on_begin callback);
+    void listen(ime_candidate_list::on_begin  callback);
     void listen(ime_candidate_list::on_update callback);
-    void listen(ime_candidate_list::on_end callback);
+    void listen(ime_candidate_list::on_end    callback);
 
     void do_events();
 private:

@@ -3,11 +3,18 @@
 #include <memory>
 #include <type_traits>
 
-#include <Unknwn.h>
-
-#include "config.hpp"
+#include "platform.hpp"
 
 namespace bklib { namespace win {
+//------------------------------------------------------------------------------
+struct com_error : virtual platform_error {};
+
+struct is_com_error {
+    bool operator()(HRESULT const hr) const BK_NOEXCEPT {
+        return FAILED(hr);
+    }
+};
+
 //------------------------------------------------------------------------------
 struct bstr_deleter {
     typedef BSTR pointer;
@@ -65,3 +72,19 @@ auto make_com_ptr_from(F function) -> com_ptr<R> {
 }
 //------------------------------------------------------------------------------
 }} //namespace bklib::win
+
+#define BK_THROW_ON_COM_ERROR(function) \
+for (auto const value = (function); FAILED(value);) { \
+    BOOST_THROW_EXCEPTION(::bklib::win::com_error {} \
+        << boost::errinfo_api_function(#function) \
+        << boost::errinfo_errno(value) \
+    ); \
+} []{}
+
+#define BK_THROW_API_EQUAL(function, value) \
+for (auto const x = (function); x == (value);) { \
+    BOOST_THROW_EXCEPTION(::bklib::win::com_error {} \
+        << boost::errinfo_api_function(#function) \
+        << boost::errinfo_errno(::GetLastError()) \
+    ); \
+} []{}
