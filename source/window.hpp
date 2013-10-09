@@ -22,6 +22,10 @@ public:
     class impl_t_;
     friend impl_t_;
     
+    enum class state {
+        starting, running, finished_error, finished_ok
+    };
+
     ~platform_window();
     explicit platform_window(platform_string title);
 
@@ -41,6 +45,10 @@ public:
     void listen(ime_candidate_list::on_begin  callback);
     void listen(ime_candidate_list::on_update callback);
     void listen(ime_candidate_list::on_end    callback);
+
+    bool is_running() const;
+
+    std::future<int> result_value();
 
     void do_events();
 private:

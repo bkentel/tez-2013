@@ -6,8 +6,14 @@ namespace bklib {
 
 template <typename F>
 struct scope_exit {
-    scope_exit(F f) : f(f) {}
-    ~scope_exit() { f(); }
+    scope_exit(F f) : f {f}, canceled {false} {}
+    ~scope_exit() { if (!canceled) f(); }
+    
+    void cancel() {
+        canceled = true;
+    }
+    
+    bool canceled;
     F f;
 };
 
@@ -20,3 +26,6 @@ scope_exit<F> make_scope_exit(F f) {
 
 #define BK_SCOPE_EXIT(CODE) \
 auto BK_UNIQUE_ID(scope_exit_) = ::bklib::make_scope_exit([&]CODE)
+
+#define BK_SCOPE_EXIT_NAME(NAME, CODE) \
+auto NAME = ::bklib::make_scope_exit([&]CODE)

@@ -18,10 +18,17 @@ pw::platform_window(
 {
 }
 
+bool pw::is_running() const {
+    return impl_->is_running();
+}
+
+std::future<int> pw::result_value() {
+    return impl_->result_value();
+}
+
 void pw::do_events() {
     impl_->do_events();
 }
-
 
 void pw::listen(on_create callback) {
     impl_->listen(callback);

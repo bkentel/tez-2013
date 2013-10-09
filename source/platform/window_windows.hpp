@@ -1,9 +1,11 @@
 #pragma once
 
 #include "platform.hpp"
+#include "com.hpp"
 #include "concurrent_queue.hpp"
 #include "window.hpp"
 #include "ime_windows.hpp"
+#include "exception.hpp"
 
 namespace bklib {
 
@@ -31,7 +33,11 @@ public:
 
     HWND handle() const BK_NOEXCEPT { return window_.get(); }
 
-    bool is_running() const BK_NOEXCEPT { return running_; }
+    bool is_running() const BK_NOEXCEPT { return state_ == state::running; }
+
+    std::future<int> result_value() {
+        return result_.get_future();
+    }
 
     void do_events();
 
@@ -67,8 +73,10 @@ private:
     
     static concurrent_queue<invocable> work_queue_;
     static concurrent_queue<invocable> event_queue_;
-    static bool running_;
+    //static bool running_;
     static DWORD thread_id_;
+    static state state_;
+    static std::promise<int> result_;
     //static std::unique_ptr<impl::ime_manager> ime_manager_;
 };
 

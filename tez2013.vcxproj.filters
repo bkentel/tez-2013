@@ -14,6 +14,8 @@
     <ClInclude Include="source\types.hpp" />
     <ClInclude Include="source\window.hpp" />
     <ClInclude Include="source\platform\ime_windows.hpp" />
+    <ClInclude Include="source\exception.hpp" />
+    <ClInclude Include="source\platform\platform_windows.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\platform\window_windows.cpp" />

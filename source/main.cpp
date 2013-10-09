@@ -1,6 +1,8 @@
 #include "pch.hpp"
 #include "window.hpp"
 
+#include <boost/iterator/iterator_adaptor.hpp>
+
 //using pseudo_random_t = std::mt19937;
 //using true_random_t = std::random_device;
 //
@@ -253,8 +255,153 @@
 //}
 
 
+struct index2d {
+    int x, y;
+};
+
+index2d north(index2d i) {
+    return {i.x, i.y - 1};
+}
+
+index2d south(index2d i) {
+    return {i.x, i.y + 1};
+}
+
+index2d east(index2d i) {
+    return {i.x + 1, i.y};
+}
+
+index2d west(index2d i) {
+    return {i.x - 1, i.y};
+}
+
+template <typename T, typename IndexType>
+struct grid_itererator_value {
+    grid_itererator_value operator=(grid_itererator_value const&) = delete;    
+
+    grid_itererator_value(T& value, IndexType x, IndexType y)
+        : value{value}, x{x}, y{y}
+    {
+    }
+
+    operator T&() { return value; }
+    operator T const&() { return value; }
+
+    T& value;
+    IndexType x, y;
+};
+
+template <typename T, typename IndexType>
+class grid_itererator
+  : public boost::iterator_adaptor<
+        grid_itererator<T, IndexType>              // Derived
+      , typename std::vector<T>::iterator        // Base
+      , grid_itererator_value<T, IndexType>              // Value
+      , boost::random_access_traversal_tag    // CategoryOrTraversal
+      , grid_itererator_value<T, IndexType>              // ref
+    >
+{
+public:
+    grid_itererator()
+      : grid_itererator::iterator_adaptor_ {}
+      , width_ {0}, height_ {0}, pos_ {0}
+    {
+    }
+
+    grid_itererator(typename std::vector<T>::iterator p, IndexType w, IndexType h)
+      : grid_itererator::iterator_adaptor_(p)
+      , width_ {w}, height_ {h}, pos_ {0}
+    {
+    }
+
+    template <typename U>
+    grid_itererator(
+        grid_itererator<U, IndexType> const& other
+      , typename std::enable_if<std::is_convertible<U*,T*>::value>::type* = nullptr
+    )
+        : grid_itererator::iterator_adaptor_(other.base())
+    {
+    }
+ private:
+    friend class boost::iterator_core_access;
+
+    typename iterator_adaptor::reference dereference() const {
+        return grid_itererator_value<T, IndexType>(
+            *base()
+          , pos_ % width_
+          , pos_ / width_
+        );
+    }
+
+    void increment() {
+        base_reference() = base() + 1;
+        ++pos_;
+    }
+   
+    size_t    pos_;
+    IndexType width_;
+    IndexType height_;
+};
+
+template <typename T, typename IndexType = unsigned>
+class grid2d {
+public:
+    using reference = T&;
+    using const_reference = T const&;
+    using iterator = typename std::vector<T>::iterator;
+    using const_iterator = typename std::vector<T>::const_iterator;
+
+    reference operator[](index2d i) {
+        auto const j = index2d_to_index_(i);
+        return data_[i];
+    }
+
+    const_reference operator[](index2d i) const {
+        auto const j = index2d_to_index_(i);
+        return data_[i];
+    }
+
+    iterator begin() { return data_.begin(); }
+    iterator end() { return data_.end(); }
+
+    const_iterator begin() const { return data_.begin(); }
+    const_iterator end() const { return data_.end(); }
+
+    const_iterator cbegin() const { return begin(); }
+    const_iterator cend() const { return end(); }
+private:
+    size_t index2d_to_index_(index2d i) const BK_NOEXCEPT {
+        check_index_(i);
+        return i.y * width_ + i.x;
+    }
+
+    void check_index_(index2d i) const {
+        BK_ASSERT(i.x >= 0);
+        BK_ASSERT(i.y >= 0);
+        BK_ASSERT(i.x < width_);
+        BK_ASSERT(i.y < height_);    
+    }
+
+    std::vector<T> data_;
+    IndexType width_, height_;
+};
+
 void main()
 try {
+    std::vector<std::string> data;
+
+    data.emplace_back("hello 0");
+    data.emplace_back("hello 1");
+    data.emplace_back("hello 2");
+    data.emplace_back("hello 3");
+
+    grid_itererator<std::string, short> it {data.begin(), 2, 2};
+
+    for (unsigned i = 0; i < 4; ++i) {
+        auto const& x = *it++;
+        std::cout << x.x << " " << x.y << " " << x.value << std::endl;
+    }
+
     bklib::platform_window win {L"Tez"};
 
     auto on_mouse_move = [&](int x, int y) {
@@ -265,10 +412,14 @@ try {
         bklib::mouse::on_move_to {on_mouse_move}
     );
 
-    while (true) {
+    while (win.is_running()) {
         win.do_events();
     }
+
+    auto result = win.result_value().get();
+
+    std::cout << "done!";
 } catch (...) {
-    
+    std::cout << "oops!";
 }
 

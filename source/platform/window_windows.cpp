@@ -11,33 +11,13 @@
 using window = bklib::platform_window::impl_t_;
 
 //------------------------------------------------------------------------------
-bklib::concurrent_queue<window::invocable> window::work_queue_ {};
-bklib::concurrent_queue<window::invocable> window::event_queue_ {};
-bool                                window::running_ {false};
+bklib::concurrent_queue<window::invocable> window::work_queue_;
+bklib::concurrent_queue<window::invocable> window::event_queue_;
 DWORD                               window::thread_id_ {0};
+bklib::platform_window::state window::state_ = bklib::platform_window::state::starting;
+std::promise<int> window::result_;
 //std::unique_ptr<bklib::impl::ime_manager> window::ime_manager_;
 //------------------------------------------------------------------------------
-struct is_not_ok {
-    bool operator()(HRESULT const hr) const BK_NOEXCEPT {
-        return hr != S_OK;
-    }
-};
-
-struct api_error : virtual std::exception, virtual boost::exception {};
-
-#define BK_THROW_API_IF(api, value, cond) \
-for (auto const pred = cond(value); pred;) { \
-    BOOST_THROW_EXCEPTION(api_error {} \
-        << boost::errinfo_api_function(#api) \
-        << boost::errinfo_errno(value) \
-    ); \
-} []{}
-
-#define BK_THROW_API(name, value) \
-BOOST_THROW_EXCEPTION(api_error {} \
-    << boost::errinfo_api_function(#name) \
-    << boost::errinfo_errno(value) \
-)
 
 namespace {
     //--------------------------------------------------------------------------
@@ -47,10 +27,15 @@ namespace {
     T* get_user_data(HWND hWnd) {
         ::SetLastError(0);
         auto const result = ::GetWindowLongPtrW(hWnd, GWLP_USERDATA);
-    
+        
         if (result == 0) {
-            BK_THROW_API_IF(GetWindowLongPtrW,
-                ::GetLastError(), std::bind1st(std::not_equal_to<DWORD>{}, 0));
+            auto const e = ::GetLastError();
+            if (e != 0) {
+                BOOST_THROW_EXCEPTION(bklib::win::windows_error {}
+                    << boost::errinfo_api_function("GetWindowLongPtrW")
+                    << boost::errinfo_errno(e)
+                );
+            }
         }
 
         return reinterpret_cast<T*>(result);
@@ -63,8 +48,13 @@ namespace {
         auto const result = ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, value);
 
         if (result == 0) {
-            BK_THROW_API_IF(SetWindowLongPtrW,
-                ::GetLastError(), std::bind1st(std::not_equal_to<DWORD>{}, 0));
+            auto const e = ::GetLastError();
+            if (e != 0) {
+                BOOST_THROW_EXCEPTION(bklib::win::windows_error {}
+                    << boost::errinfo_api_function("SetWindowLongPtrW")
+                    << boost::errinfo_errno(e)
+                );
+            }
         }
 
         return result;
@@ -76,7 +66,10 @@ void window::push_job_(invocable job) {
 
     auto const result = ::PostThreadMessageW(thread_id_, WM_NULL, 0, 0);
     if (result == 0) {
-        BK_THROW_API(PostThreadMessageW, ::GetLastError());
+        BOOST_THROW_EXCEPTION(bklib::win::windows_error {}
+            << boost::errinfo_api_function("PostThreadMessageW")
+            << boost::errinfo_errno(::GetLastError())
+        );
     }
 }
 //------------------------------------------------------------------------------
@@ -84,32 +77,60 @@ void window::push_event_(invocable event) {
     event_queue_.push(std::move(event));
 }
 //------------------------------------------------------------------------------
+
+namespace {
+    void init_com() {
+        BK_THROW_ON_COM_FAIL(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+    
+        bklib::win::com_ptr<IGlobalOptions> options {[] {
+            IGlobalOptions* result = nullptr;
+    
+            BK_THROW_ON_COM_FAIL(::CoCreateInstance(CLSID_GlobalOptions,
+                nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&result))
+            );
+
+            return result;
+        }()};
+
+        BK_THROW_ON_COM_FAIL(
+            options->Set(COMGLB_EXCEPTION_HANDLING, COMGLB_EXCEPTION_DONOT_HANDLE_ANY)
+        );
+    }
+} //namespace
+
 void window::init_() {
     std::call_once(once_flag, [] {
         ::HeapSetInformation(nullptr, HeapEnableTerminationOnCorruption, nullptr, 0);
 
-        BK_THROW_ON_COM_ERROR(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
-        BK_THROW_API_EQUAL(::ImmDisableIME(static_cast<DWORD>(-1)), FALSE);
+        init_com();
+        
+        auto const result = ::ImmDisableIME(static_cast<DWORD>(-1));
+        if (result == FALSE) {
+            BK_THROW_WINAPI(ImmDisableIME);
+        }
 
         std::thread window_thread(window::main_);
         thread_id_ = ::GetThreadId(window_thread.native_handle());
         window_thread.detach();
 
-        while (!running_ || thread_id_ == 0) {}
+        while ((state_ == state::starting) || thread_id_ == 0) {}
     });
 }
 //------------------------------------------------------------------------------
-void window::main_() {
+void window::main_()
+try {
+    BK_ASSERT(state_ == state::starting);
+
     MSG msg {0};
-    BK_THROW_ON_COM_ERROR(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+    init_com();
 
     //enusure the thread has a message queue before continuing
     ::PeekMessageW(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
 
     //ime_manager_ = std::make_unique<impl::ime_manager>(); //TODO
 
-    running_ = true;
-    BK_SCOPE_EXIT({running_ = false;});
+    state_ = state::running;
+    BK_SCOPE_EXIT_NAME(on_scope_exit, {state_ = state::finished_error;});
 
     for (;;) {
         auto const result = ::GetMessageW(&msg, 0, 0, 0);
@@ -118,26 +139,31 @@ void window::main_() {
             work_queue_.pop()();
         }
 
-        switch (result) {
-        //OK
-        case 1:
+        if (result == TRUE) {
+            //OK
             if (msg.message == BK_WM_ASSOCIATE_TSF) {
                 //ime_manager_->associate(msg.hwnd); //TODO
             }
 
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);
-
+        } else if (result == FALSE) {
+            //WM_QUIT
             break;
-        //WM_QUIT
-        case 0:
-            return;
-        //Error
-        default:
+        } else {
+            //Error
             return;
         }
     }
+
+    on_scope_exit.cancel();
+    state_ = state::finished_ok;
+
+    result_.set_value_at_thread_exit(0);
+} catch (...) {
+    result_.set_exception_at_thread_exit(std::current_exception());
 }
+
 //------------------------------------------------------------------------------
 HWND window::create_window_(window* win) {
     static wchar_t const CLASS_NAME[] = L"bkwin";
@@ -181,7 +207,7 @@ HWND window::create_window_(window* win) {
         );
         
         if (result == nullptr) {
-            BK_THROW_API(CreateWindowExW, ::GetLastError());
+            BK_THROW_WINAPI(CreateWindowExW);
         }
 
         ::PostMessageW(result, BK_WM_ASSOCIATE_TSF, reinterpret_cast<WPARAM>(result), 0);
@@ -223,6 +249,10 @@ try {
 //------------------------------------------------------------------------------
 LRESULT window::local_wnd_proc_(UINT const uMsg, WPARAM const wParam, LPARAM const lParam) {
     switch (uMsg) {
+    case WM_PAINT :
+        break;
+    case WM_ERASEBKGND :
+        return 0;
     case WM_DESTROY :
         ::PostQuitMessage(0);
         break;

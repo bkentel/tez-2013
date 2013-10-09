@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/predef.h>
+
 #if defined(WIN32)
 #   define BK_PLATFORM_WINDOWS
 #endif

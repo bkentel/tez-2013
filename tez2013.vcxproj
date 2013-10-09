@@ -92,11 +92,13 @@
     <ClInclude Include="source\callback.hpp" />
     <ClInclude Include="source\concurrent_queue.hpp" />
     <ClInclude Include="source\config.hpp" />
+    <ClInclude Include="source\exception.hpp" />
     <ClInclude Include="source\ime.hpp" />
     <ClInclude Include="source\pch.hpp" />
     <ClInclude Include="source\platform\com.hpp" />
     <ClInclude Include="source\platform\ime_windows.hpp" />
     <ClInclude Include="source\platform\platform.hpp" />
+    <ClInclude Include="source\platform\platform_windows.hpp" />
     <ClInclude Include="source\platform\window_windows.hpp" />
     <ClInclude Include="source\scope_exit.hpp" />
     <ClInclude Include="source\types.hpp" />
