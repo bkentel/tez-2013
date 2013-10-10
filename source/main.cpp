@@ -254,62 +254,62 @@
 //    return result;
 //}
 
-
+template <typename T>
 struct index2d {
-    int x, y;
+    T x, y;
 };
-
-index2d north(index2d i) {
-    return {i.x, i.y - 1};
-}
-
-index2d south(index2d i) {
-    return {i.x, i.y + 1};
-}
-
-index2d east(index2d i) {
-    return {i.x + 1, i.y};
-}
-
-index2d west(index2d i) {
-    return {i.x - 1, i.y};
-}
 
 template <typename T, typename IndexType>
 struct grid_itererator_value {
     grid_itererator_value operator=(grid_itererator_value const&) = delete;    
 
-    grid_itererator_value(T& value, IndexType x, IndexType y)
-        : value{value}, x{x}, y{y}
+    grid_itererator_value(T& value, index2d<IndexType> i) BK_NOEXCEPT
+        : value {value}, i {i}
     {
     }
 
-    operator T&() { return value; }
-    operator T const&() { return value; }
+    operator T&() BK_NOEXCEPT { return value; }
+    operator T const&() const BK_NOEXCEPT { return value; }
 
     T& value;
-    IndexType x, y;
+    index2d<IndexType> i;
+};
+
+template <typename T, typename I>
+struct grid_itererator_traits {
+    using base      = typename std::vector<T>::iterator;
+    using value     = grid_itererator_value<T, I>;
+    using traversal = boost::random_access_traversal_tag;    
+    using reference = value;
+};
+
+template <typename T, typename I>
+struct grid_itererator_traits<T const, I> {
+    using base      = typename std::vector<T>::const_iterator;
+    using value     = grid_itererator_value<T const, I>;
+    using traversal = boost::random_access_traversal_tag;
+    using reference = value;
 };
 
 template <typename T, typename IndexType>
 class grid_itererator
   : public boost::iterator_adaptor<
-        grid_itererator<T, IndexType>              // Derived
-      , typename std::vector<T>::iterator        // Base
-      , grid_itererator_value<T, IndexType>              // Value
-      , boost::random_access_traversal_tag    // CategoryOrTraversal
-      , grid_itererator_value<T, IndexType>              // ref
+        grid_itererator<T, IndexType>                            // Derived
+      , typename grid_itererator_traits<T, IndexType>::base      // Base
+      , typename grid_itererator_traits<T, IndexType>::value     // Value
+      , typename grid_itererator_traits<T, IndexType>::traversal // CategoryOrTraversal
+      , typename grid_itererator_traits<T, IndexType>::reference // Reference
     >
 {
 public:
-    grid_itererator()
+    grid_itererator() BK_NOEXCEPT
       : grid_itererator::iterator_adaptor_ {}
-      , width_ {0}, height_ {0}, pos_ {0}
+      , width_ {0}, height_ {0}, pos_ {}
     {
     }
 
-    grid_itererator(typename std::vector<T>::iterator p, IndexType w, IndexType h)
-      : grid_itererator::iterator_adaptor_(p)
+    grid_itererator(base_type it, IndexType w, IndexType h)
+      : grid_itererator::iterator_adaptor_ {it}
       , width_ {w}, height_ {h}, pos_ {0}
     {
     }
@@ -327,10 +327,21 @@ public:
 
     typename iterator_adaptor::reference dereference() const {
         return grid_itererator_value<T, IndexType>(
-            *base()
-          , pos_ % width_
-          , pos_ / width_
+            *base(), {
+                static_cast<IndexType>(pos_) % width_,
+                static_cast<IndexType>(pos_) / width_
+            }
         );
+    }
+
+    void advance(typename iterator_adaptor::difference_type n) {
+        base_reference() = base() + n;
+        pos_ += n;
+    }
+
+    void decrement() {
+        base_reference() = base() - 1;
+        --pos_;
     }
 
     void increment() {
@@ -343,64 +354,100 @@ public:
     IndexType height_;
 };
 
-template <typename T, typename IndexType = unsigned>
+template <typename T, typename IndexType = int>
 class grid2d {
 public:
+    using index_t = index2d<IndexType>;
+
     using reference = T&;
     using const_reference = T const&;
-    using iterator = typename std::vector<T>::iterator;
-    using const_iterator = typename std::vector<T>::const_iterator;
 
-    reference operator[](index2d i) {
-        auto const j = index2d_to_index_(i);
-        return data_[i];
+    using iterator       = grid_itererator<T,       IndexType>;
+    using const_iterator = grid_itererator<T const, IndexType>;
+
+    grid2d(IndexType w, IndexType h, T value = T {})
+        : width_  { [&] { BK_ASSERT(w > 0); return w; }() }
+        , height_ { [&] { BK_ASSERT(h > 0); return h; }() }
+        , data_(static_cast<size_t>(w)*static_cast<size_t>(h), value)
+    {
     }
 
-    const_reference operator[](index2d i) const {
-        auto const j = index2d_to_index_(i);
-        return data_[i];
+    reference operator[](index_t i) {
+        return data_[index2d_to_index_(i)];
     }
 
-    iterator begin() { return data_.begin(); }
-    iterator end() { return data_.end(); }
+    const_reference operator[](index_t i) const {
+        return data_[index2d_to_index_(i)];
+    }
 
-    const_iterator begin() const { return data_.begin(); }
-    const_iterator end() const { return data_.end(); }
+    bool is_valid(index_t i) const BK_NOEXCEPT {
+        return (i.x >= 0)     && (i.y >= 0)
+            && (i.x < width_) && (i.y < height_);
+    }
+
+    iterator begin() { return iterator(data_.begin(), width_, height_); }
+    iterator end() { return iterator(data_.end(), width_, height_); }
+
+    const_iterator begin() const { return const_iterator(data_.begin(), width_, height_); }
+    const_iterator end() const { return const_iterator(data_.end(), width_, height_); }
 
     const_iterator cbegin() const { return begin(); }
     const_iterator cend() const { return end(); }
 private:
-    size_t index2d_to_index_(index2d i) const BK_NOEXCEPT {
-        check_index_(i);
+    size_t index2d_to_index_(index_t i) const BK_NOEXCEPT {
+        BK_ASSERT(is_valid(i));
         return i.y * width_ + i.x;
     }
 
-    void check_index_(index2d i) const {
-        BK_ASSERT(i.x >= 0);
-        BK_ASSERT(i.y >= 0);
-        BK_ASSERT(i.x < width_);
-        BK_ASSERT(i.y < height_);    
-    }
-
-    std::vector<T> data_;
     IndexType width_, height_;
+    std::vector<T> data_;
 };
+
+template <typename T>
+index2d<T> north(index2d<T> i) BK_NOEXCEPT {
+    return {i.x, i.y - 1};
+}
+    
+template <typename T>
+index2d<T> south(index2d<T> i) BK_NOEXCEPT {
+    return {i.x, i.y + 1};
+}
+
+template <typename T>
+index2d<T> east(index2d<T> i) BK_NOEXCEPT {
+    return {i.x + 1, i.y};
+}
+
+template <typename T>
+index2d<T> west(index2d<T> i) BK_NOEXCEPT {
+    return {i.x - 1, i.y};
+}
+
+template <typename T>
+T const& as_const(T& x) BK_NOEXCEPT {
+    return x;
+}
 
 void main()
 try {
-    std::vector<std::string> data;
+    grid2d<std::string> test_grid(10, 10, "Empty");
 
-    data.emplace_back("hello 0");
-    data.emplace_back("hello 1");
-    data.emplace_back("hello 2");
-    data.emplace_back("hello 3");
-
-    grid_itererator<std::string, short> it {data.begin(), 2, 2};
-
-    for (unsigned i = 0; i < 4; ++i) {
-        auto const& x = *it++;
-        std::cout << x.x << " " << x.y << " " << x.value << std::endl;
+    for (auto cell : test_grid) {
+        std::stringstream out;
+        out << "Cell[" << cell.i.x << ", " << cell.i.y << "]";
+        cell.value = out.str();
     }
+
+    for (auto cell : as_const(test_grid)) {
+        std::cout << cell.value << std::endl;
+
+        if ( test_grid.is_valid(north(cell.i)) ) {
+            std::cout << "  north = " << test_grid[north(cell.i)] << std::endl;
+        } else {
+            std::cout << "  north = <NONE>" << std::endl;
+        }
+    }
+
 
     bklib::platform_window win {L"Tez"};
 
