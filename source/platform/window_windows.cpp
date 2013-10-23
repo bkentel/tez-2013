@@ -238,6 +238,8 @@ try {
 
     return win->local_wnd_proc_(uMsg, wParam, lParam);
 } catch (std::exception& e) {
+    BK_UNUSED(e);
+
     BK_DEBUG_BREAK();
     ::PostQuitMessage(-1);
     return 0;
@@ -301,8 +303,6 @@ void window::shutdown() {
         ::PostQuitMessage(0);
     });
 }
-
-
 
 void window::listen(bklib::platform_window::on_create callback) {}
 void window::listen(bklib::platform_window::on_close  callback) {}

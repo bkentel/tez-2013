@@ -3,6 +3,8 @@
 
 #include <boost/iterator/iterator_adaptor.hpp>
 
+#include "math.hpp"
+
 //using pseudo_random_t = std::mt19937;
 //using true_random_t = std::random_device;
 //
@@ -254,421 +256,409 @@
 //    return result;
 //}
 
-template <typename T>
-struct index2d {
-    T x, y;
-};
+#pragma region temp
+
+//template <typename T, typename IndexType>
+//struct grid_itererator_value {
+//    grid_itererator_value operator=(grid_itererator_value const&) = delete;    
+//
+//    grid_itererator_value(T& value, index2d<IndexType> i) BK_NOEXCEPT
+//        : value {value}, i {i}
+//    {
+//    }
+//
+//    operator T&() BK_NOEXCEPT { return value; }
+//    operator T const&() const BK_NOEXCEPT { return value; }
+//
+//    T& value;
+//    index2d<IndexType> i;
+//};
+//
+//template <typename T, typename I>
+//struct grid_itererator_traits {
+//    using base      = typename std::vector<T>::iterator;
+//    using value     = grid_itererator_value<T, I>;
+//    using traversal = boost::random_access_traversal_tag;    
+//    using reference = value;
+//};
+//
+//template <typename T, typename I>
+//struct grid_itererator_traits<T const, I> {
+//    using base      = typename std::vector<T>::const_iterator;
+//    using value     = grid_itererator_value<T const, I>;
+//    using traversal = boost::random_access_traversal_tag;
+//    using reference = value;
+//};
+//
+//template <typename T, typename IndexType>
+//class grid_itererator
+//  : public boost::iterator_adaptor<
+//        grid_itererator<T, IndexType>                            // Derived
+//      , typename grid_itererator_traits<T, IndexType>::base      // Base
+//      , typename grid_itererator_traits<T, IndexType>::value     // Value
+//      , typename grid_itererator_traits<T, IndexType>::traversal // CategoryOrTraversal
+//      , typename grid_itererator_traits<T, IndexType>::reference // Reference
+//    >
+//{
+//public:
+//    grid_itererator() BK_NOEXCEPT
+//      : grid_itererator::iterator_adaptor_ {}
+//      , width_ {0}, height_ {0}, pos_ {}
+//    {
+//    }
+//
+//    grid_itererator(base_type it, IndexType w, IndexType h)
+//      : grid_itererator::iterator_adaptor_ {it}
+//      , width_ {w}, height_ {h}, pos_ {0}
+//    {
+//    }
+//
+//    template <typename U>
+//    grid_itererator(
+//        grid_itererator<U, IndexType> const& other
+//      , typename std::enable_if<std::is_convertible<U*,T*>::value>::type* = nullptr
+//    )
+//        : grid_itererator::iterator_adaptor_(other.base())
+//    {
+//    }
+// private:
+//    friend class boost::iterator_core_access;
+//
+//    typename iterator_adaptor::reference dereference() const {
+//        return grid_itererator_value<T, IndexType>(
+//            *base(), {
+//                static_cast<IndexType>(pos_) % width_,
+//                static_cast<IndexType>(pos_) / width_
+//            }
+//        );
+//    }
+//
+//    void advance(typename iterator_adaptor::difference_type n) {
+//        base_reference() = base() + n;
+//        pos_ += n;
+//    }
+//
+//    void decrement() {
+//        advance(-1);
+//    }
+//
+//    void increment() {
+//        advance(1);
+//    }
+//   
+//    size_t    pos_;
+//    IndexType width_;
+//    IndexType height_;
+//};
+//
+//template <typename T, typename IndexType>
+//class grid_sub_itererator
+//  : public boost::iterator_adaptor<
+//        grid_sub_itererator<T, IndexType>                            // Derived
+//      , typename grid_itererator_traits<T, IndexType>::base      // Base
+//      , typename grid_itererator_traits<T, IndexType>::value     // Value
+//      , typename grid_itererator_traits<T, IndexType>::traversal // CategoryOrTraversal
+//      , typename grid_itererator_traits<T, IndexType>::reference // Reference
+//    >
+//{
+//public:
+//    grid_sub_itererator() BK_NOEXCEPT
+//      : grid_sub_itererator::iterator_adaptor_ {}
+//      , width_ {0}, height_ {0}, pos_ {}
+//    {
+//    }
+//
+//    grid_sub_itererator(base_type it, size_t offset, size_t stride, IndexType w, IndexType h)
+//      : grid_sub_itererator::iterator_adaptor_ {it + offset}
+//        , width_ {w}, height_ {h}, pos_ {0}, offset_ {offset}, stride_ {stride}
+//    {
+//    }
+//
+//    template <typename U>
+//    grid_sub_itererator(
+//        grid_sub_itererator<U, IndexType> const& other
+//      , typename std::enable_if<std::is_convertible<U*,T*>::value>::type* = nullptr
+//    )
+//        : grid_sub_itererator::iterator_adaptor_(other.base())
+//    {
+//    }
+// private:
+//    friend class boost::iterator_core_access;
+//
+//    typename iterator_adaptor::reference dereference() const {
+//        auto const x = (pos_ % width_) + (stride_ - width_);
+//        auto const y = (pos_ + offset_) / stride_;
+//
+//        return grid_itererator_value<T, IndexType>(
+//            *base(), {static_cast<IndexType>(x), static_cast<IndexType>(y) }
+//        );
+//    }
+//
+//    void advance(typename iterator_adaptor::difference_type n) {
+//        auto dx = (pos_ + n) % width_;
+//        auto dy = ((pos_ + n) / width_) - (pos_ / width_);
+//
+//        BK_ASSERT(pos_ + n >= 0);
+//        BK_ASSERT(pos_ + n <= width_ + height_);
+//
+//        if (pos_ + n == width_ + height_) {
+//            base_reference() = base() + n;
+//        } else {
+//            base_reference() = base() + n + dy*(stride_ - width_ + 1);    
+//        }
+//        
+//        pos_ += n;
+//    }
+//
+//    void decrement() {
+//        advance(-1);
+//    }
+//
+//    void increment() {
+//        advance(+1);
+//    }
+//   
+//    size_t pos_;
+//    size_t offset_;
+//    size_t stride_; 
+//
+//    IndexType width_;
+//    IndexType height_;
+//};
+//
+//
+//template <typename T>
+//index2d<T> north(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
+//    return {i.x, i.y - n};
+//}
+//    
+//template <typename T>
+//index2d<T> south(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
+//    return {i.x, i.y + n};
+//}
+//
+//template <typename T>
+//index2d<T> east(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
+//    return {i.x + n, i.y};
+//}
+//
+//template <typename T>
+//index2d<T> west(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
+//    return {i.x - n, i.y};
+//}
+//
+//template <typename T>
+//T const& as_const(T& x) BK_NOEXCEPT {
+//    return x;
+//}
+//
+//
+//class level_map {
+//    using rect = axis_aligned_rect<int>;
+//
+//    rect find_space_for(rect ra) const {
+//        ra.move_to(rect::point {{0, 0}});
+//
+//        for (auto const& rb : room_rects_) {
+//            auto i = intersect(ra, rb);
+//
+//            if (i.first) {
+//                
+//            } else {
+//                return ra;
+//            }
+//        }
+//    }
+//
+//    grid2d<tile>      grid_;
+//    std::vector<rect> room_rects_;
+//};
+#pragma endregion temp
+
+using point  = bklib::point2d<int>;
+using rect   = bklib::axis_aligned_rect<int>;
+using random = std::mt19937;
 
 template <typename T>
-struct point2d {
-    T x, y;
-};
+struct quad_tree {
+    struct detail {
+        using index_t = std::uint16_t;
+        static auto const size_i = sizeof(index_t);
 
-template <typename T>
-void reorder(point2d<T>& pa, point2d<T>& pb) {
-    using std::swap;    
+        using index_vector = std::vector<index_t>;
+        static auto const size_v = sizeof(index_vector);
 
-    if (pb.x < pa.x) swap(pa.x, pb.x);
-    if (pb.y < pa.y) swap(pa.y, pb.y);
-}
+        static auto const size_total = size_v + size_v % sizeof(std::max_align_t) + sizeof(std::max_align_t);
 
-template <typename T, typename IndexType>
-struct grid_itererator_value {
-    grid_itererator_value operator=(grid_itererator_value const&) = delete;    
+        static auto const array_count = size_total / size_i - 1;
+        using index_array = std::array<index_t, array_count>;
 
-    grid_itererator_value(T& value, index2d<IndexType> i) BK_NOEXCEPT
-        : value {value}, i {i}
-    {
-    }
+        using storage_t = std::aligned_storage_t<size_total>;
 
-    operator T&() BK_NOEXCEPT { return value; }
-    operator T const&() const BK_NOEXCEPT { return value; }
-
-    T& value;
-    index2d<IndexType> i;
-};
-
-template <typename T, typename I>
-struct grid_itererator_traits {
-    using base      = typename std::vector<T>::iterator;
-    using value     = grid_itererator_value<T, I>;
-    using traversal = boost::random_access_traversal_tag;    
-    using reference = value;
-};
-
-template <typename T, typename I>
-struct grid_itererator_traits<T const, I> {
-    using base      = typename std::vector<T>::const_iterator;
-    using value     = grid_itererator_value<T const, I>;
-    using traversal = boost::random_access_traversal_tag;
-    using reference = value;
-};
-
-template <typename T, typename IndexType>
-class grid_itererator
-  : public boost::iterator_adaptor<
-        grid_itererator<T, IndexType>                            // Derived
-      , typename grid_itererator_traits<T, IndexType>::base      // Base
-      , typename grid_itererator_traits<T, IndexType>::value     // Value
-      , typename grid_itererator_traits<T, IndexType>::traversal // CategoryOrTraversal
-      , typename grid_itererator_traits<T, IndexType>::reference // Reference
-    >
-{
-public:
-    grid_itererator() BK_NOEXCEPT
-      : grid_itererator::iterator_adaptor_ {}
-      , width_ {0}, height_ {0}, pos_ {}
-    {
-    }
-
-    grid_itererator(base_type it, IndexType w, IndexType h)
-      : grid_itererator::iterator_adaptor_ {it}
-      , width_ {w}, height_ {h}, pos_ {0}
-    {
-    }
-
-    template <typename U>
-    grid_itererator(
-        grid_itererator<U, IndexType> const& other
-      , typename std::enable_if<std::is_convertible<U*,T*>::value>::type* = nullptr
-    )
-        : grid_itererator::iterator_adaptor_(other.base())
-    {
-    }
- private:
-    friend class boost::iterator_core_access;
-
-    typename iterator_adaptor::reference dereference() const {
-        return grid_itererator_value<T, IndexType>(
-            *base(), {
-                static_cast<IndexType>(pos_) % width_,
-                static_cast<IndexType>(pos_) / width_
-            }
-        );
-    }
-
-    void advance(typename iterator_adaptor::difference_type n) {
-        base_reference() = base() + n;
-        pos_ += n;
-    }
-
-    void decrement() {
-        advance(-1);
-    }
-
-    void increment() {
-        advance(1);
-    }
-   
-    size_t    pos_;
-    IndexType width_;
-    IndexType height_;
-};
-
-template <typename T, typename IndexType>
-class grid_sub_itererator
-  : public boost::iterator_adaptor<
-        grid_sub_itererator<T, IndexType>                            // Derived
-      , typename grid_itererator_traits<T, IndexType>::base      // Base
-      , typename grid_itererator_traits<T, IndexType>::value     // Value
-      , typename grid_itererator_traits<T, IndexType>::traversal // CategoryOrTraversal
-      , typename grid_itererator_traits<T, IndexType>::reference // Reference
-    >
-{
-public:
-    grid_sub_itererator() BK_NOEXCEPT
-      : grid_sub_itererator::iterator_adaptor_ {}
-      , width_ {0}, height_ {0}, pos_ {}
-    {
-    }
-
-    grid_sub_itererator(base_type it, size_t offset, size_t stride, IndexType w, IndexType h)
-      : grid_sub_itererator::iterator_adaptor_ {it + offset}
-        , width_ {w}, height_ {h}, pos_ {0}, offset_ {offset}, stride_ {stride}
-    {
-    }
-
-    template <typename U>
-    grid_sub_itererator(
-        grid_sub_itererator<U, IndexType> const& other
-      , typename std::enable_if<std::is_convertible<U*,T*>::value>::type* = nullptr
-    )
-        : grid_sub_itererator::iterator_adaptor_(other.base())
-    {
-    }
- private:
-    friend class boost::iterator_core_access;
-
-    typename iterator_adaptor::reference dereference() const {
-        auto const x = (pos_ % width_) + (stride_ - width_);
-        auto const y = (pos_ + offset_) / stride_;
-
-        return grid_itererator_value<T, IndexType>(
-            *base(), {static_cast<IndexType>(x), static_cast<IndexType>(y) }
-        );
-    }
-
-    void advance(typename iterator_adaptor::difference_type n) {
-        auto dx = (pos_ + n) % width_;
-        auto dy = ((pos_ + n) / width_) - (pos_ / width_);
-
-        BK_ASSERT(pos_ + n >= 0);
-        BK_ASSERT(pos_ + n <= width_ + height_);
-
-        if (pos_ + n == width_ + height_) {
-            base_reference() = base() + n;
-        } else {
-            base_reference() = base() + dx + dy*(stride_ - width_ + 1);    
-        }
-        
-        pos_ += n;
-    }
-
-    void decrement() {
-        advance(-1);
-    }
-
-    void increment() {
-        advance(+1);
-    }
-   
-    size_t pos_;
-    size_t offset_;
-    size_t stride_; 
-
-    IndexType width_;
-    IndexType height_;
-};
-
-template <typename T, typename IndexType = int>
-class grid2d {
-public:
-    using point = point2d<IndexType>;
-    using index_t = point;
-
-    using reference = T&;
-    using const_reference = T const&;
-
-    using iterator       = grid_itererator<T,       IndexType>;
-    using const_iterator = grid_itererator<T const, IndexType>;
-
-    using sub_iterator       = grid_sub_itererator<T,       IndexType>;
-    using const_sub_iterator = grid_sub_itererator<T const, IndexType>;
-
-    grid2d(IndexType w, IndexType h, T value = T {})
-        : width_  { [&] { BK_ASSERT(w > 0); return w; }() }
-        , height_ { [&] { BK_ASSERT(h > 0); return h; }() }
-        , data_(static_cast<size_t>(w)*static_cast<size_t>(h), value)
-    {
-    }
-
-    reference operator[](index_t i) {
-        return data_[index2d_to_index_(i)];
-    }
-
-    const_reference operator[](index_t i) const {
-        return data_[index2d_to_index_(i)];
-    }
-
-    bool is_valid(index_t i) const BK_NOEXCEPT {
-        return (i.x >= 0)     && (i.y >= 0)
-            && (i.x < width_) && (i.y < height_);
-    }
-
-    sub_iterator begin(point pa, point pb) {
-        reorder(pa, pb);
-        
-        auto const w = pb.x - pa.x;
-        auto const h = pb.y - pa.y;
-
-        BK_ASSERT(w > 0);
-        BK_ASSERT(h > 0);
-
-        return sub_iterator(data_.begin(), index2d_to_index_(pa), width_, w, h);
-    }
-    
-    sub_iterator end(point pa, point pb) {
-        reorder(pa, pb);
-
-        auto const w = pb.x - pa.x;
-        auto const h = pb.y - pa.y;
-
-        BK_ASSERT(w > 0);
-        BK_ASSERT(h > 0);
-
-        //the recct formed by pa and pb is exclusive of pb; make the iterator
-        //point to one element past the last element.
-        --pb.y;
-
-        return sub_iterator(data_.begin(), index2d_to_index_(pb), 0, 0, 0);
-    }
-    
-    iterator begin() { return iterator(data_.begin(), width_, height_); }
-    iterator end() { return iterator(data_.end(), width_, height_); }
-
-    const_iterator begin() const { return const_iterator(data_.begin(), width_, height_); }
-    const_iterator end() const { return const_iterator(data_.end(), width_, height_); }
-
-    const_iterator cbegin() const { return begin(); }
-    const_iterator cend() const { return end(); }
-private:
-    size_t index2d_to_index_(index_t i) const BK_NOEXCEPT {
-        BK_ASSERT(is_valid(i));
-        return i.y * width_ + i.x;
-    }
-
-    IndexType width_, height_;
-    std::vector<T> data_;
-};
-
-template <typename T>
-index2d<T> north(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
-    return {i.x, i.y - n};
-}
-    
-template <typename T>
-index2d<T> south(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
-    return {i.x, i.y + n};
-}
-
-template <typename T>
-index2d<T> east(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
-    return {i.x + n, i.y};
-}
-
-template <typename T>
-index2d<T> west(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
-    return {i.x - n, i.y};
-}
-
-template <typename T>
-T const& as_const(T& x) BK_NOEXCEPT {
-    return x;
-}
-
-
-
-template <typename T>
-class axis_aligned_rect {
-public:
-    using point = point2d<T>;
-
-    axis_aligned_rect(T x0, T y0, T x1, T y1)
-        : x0_ {x0}, y0_ {y0}
-        , x1_ {x1}, y1_ {y1}
-    {
-        BK_ASSERT(x1 > x0);
-        BK_ASSERT(y1 > y0);
-    }
-
-    axis_aligned_rect(std::initializer_list<T> list)
-        : axis_aligned_rect(
-            *(list.begin() + 0)
-          , *(list.begin() + 1)
-          , *(list.begin() + 2)
-          , *(list.begin() + 3)
-        )
-    {
-        BK_ASSERT(list.size() == 4);        
-    }
-
-    axis_aligned_rect(point p, T w, T h)
-        : axis_aligned_rect(p.x, p.y, p.x + w, p.y + h)
-    {
-    }
-
-    void move_to(point p) {
-        auto const dx = p.x - x0_;
-        auto const dy = p.y - y0_;
-
-        x0_ += dx; x1_ += dx;
-        y0_ += dy; y1_ += dy;
-    }
-
-    T left()   const BK_NOEXCEPT { return x0_; }
-    T right()  const BK_NOEXCEPT { return x1_; }
-    T top()    const BK_NOEXCEPT { return y0_; }
-    T bottom() const BK_NOEXCEPT { return y1_; }
-
-    T width()  const BK_NOEXCEPT { return right()  - left(); }
-    T height() const BK_NOEXCEPT { return bottom() - top();  }
-private:
-    bool is_well_formed() const {
-        return (left() < right()) && (top() < bottom());
-    }
-
-    T x0_, x1_;
-    T y0_, y1_;
-};
-
-template <typename T>
-std::pair<bool, axis_aligned_rect<T>>
-intersect(axis_aligned_rect<T> const ra, axis_aligned_rect<T> const rb) {
-    T const left   = std::max(ra.left(),   rb.left());
-    T const right  = std::min(ra.right(),  rb.right());
-    T const top    = std::max(ra.top(),    rb.top());
-    T const bottom = std::min(ra.bottom(), rb.bottom());
-
-    if (left < right && top < bottom) {
-        return { true, {left, top, right, bottom} };
-    } else {
-        return { false, {0, 0, 1, 1} };
-    }
-}
-
-struct tile {
-    enum class tile_type : uint16_t {
-        empty = 0,
+        static index_t const UNUSED = 0xFFFF;
     };
 
-    tile_type type;
-    uint64_t  data;
-};
+    struct child {
+        typename detail::storage_t storage;
 
-class level_map {
-    using rect = axis_aligned_rect<int>;
+        child() {
+            set_is_leaf();
+            
+            auto const beg = reinterpret_cast<detail::index_t*>(&storage);
+            auto const end = reinterpret_cast<detail::index_t*>(&storage) + detail::array_count;
 
-    rect find_space_for(rect ra) const {
-        ra.move_to(rect::point {{0, 0}});
-
-        for (auto const& rb : room_rects_) {
-            auto i = intersect(ra, rb);
-
-            if (i.first) {
-                
-            } else {
-                return ra;
-            }
+            std::fill(beg, end, detail::UNUSED);
         }
+
+        void set_is_leaf(bool value = true) {
+            reinterpret_cast<detail::index_t*>(&storage)[detail::array_count] = (value ? 1 : 0);
+        }
+
+        bool is_leaf() const {
+            return reinterpret_cast<detail::index_t*>(&storage)[detail::array_count] == 0;
+        }
+
+        typename detail::index_array& as_array() {
+            return *reinterpret_cast<detail::index_array*>(&storage);
+        }
+
+        typename detail::index_array& as_vector() {
+            BK_ASSERT(!is_leaf());
+            return *reinterpret_cast<detail::index_vector*>(&storage);
+        }
+    };
+
+    using rect = bklib::axis_aligned_rect<int>;
+
+    explicit quad_tree(rect bounds)
+        : bounds_{bounds}
+    {
+        std::cout << detail::size_i      << std::endl;
+        std::cout << detail::size_v      << std::endl;
+        std::cout << detail::size_total  << std::endl;
+        std::cout << detail::array_count << std::endl;
     }
 
-    grid2d<tile>      grid_;
-    std::vector<rect> room_rects_;
+    void insert(rect r, T data) {
+        
+    }
+
+    child root_;
+
+    std::vector<T>     data_;
+    std::vector<child> children_;
+
+    rect bounds_;
 };
 
+
+struct simple_room_gen {
+    using distr = std::uniform_int_distribution<unsigned>;
+    
+    simple_room_gen(unsigned min_w, unsigned max_w, unsigned min_h, unsigned max_h)
+      : dist_w_(min_w, max_w)
+      , dist_h_(min_h, max_h)
+    {
+        BK_ASSERT(min_w <= max_w);
+        BK_ASSERT(min_h <= max_h);
+    }
+
+    distr dist_w_;
+    distr dist_h_;
+};
+
+
+struct random_placement_generator {
+    using random = std::mt19937;
+    using distr  = std::uniform_int_distribution<int>;
+    using rect   = bklib::axis_aligned_rect<int>;
+
+    random_placement_generator(
+        int      range_x, int      range_y,
+        unsigned min_w,   unsigned max_w,
+        unsigned min_h,   unsigned max_h
+    )
+      : distribution_x_(-range_x, range_x)
+      , distribution_y_(-range_y, range_y)
+      , distribution_w_(min_w, max_w)
+      , distribution_h_(min_h, max_h)
+      , rects_{}
+    {
+        BK_ASSERT(range_x > 0);
+        BK_ASSERT(range_y > 0);
+    }
+    
+    std::pair<bool, rect> find_intersection(rect r, unsigned from = 0) const {
+        std::pair<bool, rect> result;
+
+        std::find_if(
+            std::cbegin(rects_) + from,
+            std::cend(rects_),
+            [&](rect s) -> bool { return (result = bklib::intersect(r, s)).first; }
+        );
+
+        return result;
+    }
+
+    bool generate(random& rand) {
+        auto const x = distribution_x_(rand);
+        auto const y = distribution_y_(rand);
+        auto const w = distribution_w_(rand);
+        auto const h = distribution_h_(rand);
+
+        auto const l = x;
+        auto const t = y;
+        auto const r = x + w;
+        auto const b = y + h;
+
+        rect const room_rect {
+            l
+          , t
+          , r < distribution_x_.max() ? r : distribution_x_.max()
+          , b < distribution_y_.max() ? b : distribution_y_.max()
+        };
+
+        auto ri = find_intersection(room_rect);
+
+        if (ri.first) {
+            BK_DEBUG_BREAK();
+        }
+
+        rects_.emplace_back(room_rect);
+
+        return true;
+    }
+
+    distr distribution_x_;
+    distr distribution_y_;
+    distr distribution_w_;
+    distr distribution_h_;
+
+    std::vector<rect> rects_;
+};
 
 void main()
 try {
-    grid2d<std::string> test_grid(10, 10, "Empty");
+    random rand(100);
 
-    for (auto cell : test_grid) {
-        std::stringstream out;
-        out << "Cell[" << cell.i.x << ", " << cell.i.y << "]";
-        cell.value = out.str();
+    auto gen = random_placement_generator(100, 100, 2, 10, 2, 10);
+
+    for (int i = 0; i < 25; ++i) {
+        gen.generate(rand);
     }
 
-    //for (auto cell : as_const(test_grid)) {
-    //    std::cout << cell.value << std::endl;
-    //}
+    point p1 {10, 10};
+    point p2 {10, 10};
 
-    using point = grid2d<std::string>::point;
-    auto beg = test_grid.begin(point {2, 2}, point {4, 4});
-    auto end = test_grid.end(point {2, 2}, point {4, 4});
+    auto r = (p1 == p2);
 
-    for (auto it = beg; it != end; ++it) {
-        auto const& cell = *it;
-        std::cout << cell.value << std::endl;
-    }
+    auto const pi = bklib::intersect(p1, p2);
+
+    rect r1 {0, 0, 10, 10};
+    rect r2 {10, 10, 15, 15};
+
+    auto ri = bklib::intersect(r1, r2);
+
 
     bklib::platform_window win {L"Tez"};
 

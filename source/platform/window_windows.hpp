@@ -25,7 +25,7 @@ class platform_window::impl_t_ {
     impl_t_(impl_t_ const&) = delete;
     impl_t_& operator=(impl_t_ const&) = delete;
 public:
-    using invocable        = std::function<void()>;
+    using invocable = std::function<void()>;
 
     impl_t_();
 

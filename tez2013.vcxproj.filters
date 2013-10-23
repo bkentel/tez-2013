@@ -16,6 +16,10 @@
     <ClInclude Include="source\platform\ime_windows.hpp" />
     <ClInclude Include="source\exception.hpp" />
     <ClInclude Include="source\platform\platform_windows.hpp" />
+    <ClInclude Include="source\math.hpp" />
+    <ClInclude Include="source\game\tile_data.hpp" />
+    <ClInclude Include="source\game\grid2d.hpp" />
+    <ClInclude Include="source\game\room.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\platform\window_windows.cpp" />
@@ -23,5 +27,7 @@
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\pch.cpp" />
     <ClCompile Include="source\window.cpp" />
+    <ClCompile Include="tests\test_math.cpp" />
+    <ClCompile Include="tests\test_grid2d.cpp" />
   </ItemGroup>
 </Project>
