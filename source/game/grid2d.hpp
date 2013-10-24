@@ -23,6 +23,10 @@ namespace detail {
         {
         }
 
+        T& operator=(T rhs) {
+            return (value = rhs);
+        }
+
         operator T&() BK_NOEXCEPT { return value; }
         operator T const&() const BK_NOEXCEPT { return value; }
 
@@ -312,7 +316,7 @@ public:
     const_iterator cbegin() const { return begin(); }
     const_iterator cend()   const { return end(); }
 private:
-    size_t index2d_to_index_(index_t i) const BK_NOEXCEPT {
+    size_t index2d_to_index_(index i) const BK_NOEXCEPT {
         BK_ASSERT(is_valid(i));
         return i.y * width_ + i.x;
     }

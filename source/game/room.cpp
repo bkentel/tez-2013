@@ -51,5 +51,17 @@ room room_simple::generate(tez::random& rand) {
 
     auto result = room(w, h, value);
 
+    std::replace_if(
+        std::begin(result)
+      , std::end(result),
+        [&result](room::iterator::value_type const& it) {
+            return (it.i.x == 0)
+                || (it.i.y == 0)
+                || (it.i.x == result.width()  - 1)
+                || (it.i.y == result.height() - 1);
+        }
+      , tile_data {tez::tile_type::wall, 0, 0}
+    );
+
     return result;
 }

@@ -76,3 +76,34 @@ TEST(Grid2d, Swap) {
     for (auto const& i : grid_bb) ASSERT_EQ(i, value_b);
 }
 
+//==============================================================================
+
+#include "game/room.hpp"
+
+TEST(Room, SimpleRoom) {
+    using namespace tez;
+
+    tez::random rand{std::random_device{}()};
+
+    auto const min_w = 5u; auto const max_w = 10u;
+    auto const min_h = 3u; auto const max_h = 7u;
+    generator::room_simple gen{{min_w, max_w}, {min_h, max_h}};
+
+    for (int i = 0; i < 1000; ++i) {
+        auto r = gen.generate(rand);
+        ASSERT_GE(r.width(), min_w);
+        ASSERT_LE(r.width(), max_w);
+        ASSERT_GE(r.height(), min_h);
+        ASSERT_LE(r.height(), max_h);
+
+        for (size_t y : {0u, r.height() - 1}) {
+            for (auto x = 0; x < r.width(); ++x)
+                ASSERT_EQ((r[{x, y}].type), tez::tile_type::wall);
+        }
+
+        for (size_t x : {0u, r.width() - 1}) {
+            for (auto y = 0; y < r.height(); ++y)
+                ASSERT_EQ((r[{x, y}].type), tez::tile_type::wall);
+        }
+    }
+}
