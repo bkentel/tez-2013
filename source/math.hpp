@@ -104,7 +104,7 @@ public:
           , *(list.begin() + 3)
         )
     {
-        BK_ASSERT(list.size() == 4); 
+        BK_ASSERT(list.size() == 4);
     }
 
     axis_aligned_rect(point p, value w, value h)
@@ -153,7 +153,7 @@ private:
         : x0_ {x0}, y0_ {y0}
         , x1_ {x1}, y1_ {y1}
     {
-    }    
+    }
 
     bool is_well_formed() const BK_NOEXCEPT {
         return (left() < right()) && (top() < bottom());

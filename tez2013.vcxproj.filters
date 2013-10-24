@@ -29,5 +29,6 @@
     <ClCompile Include="source\window.cpp" />
     <ClCompile Include="tests\test_math.cpp" />
     <ClCompile Include="tests\test_grid2d.cpp" />
+    <ClCompile Include="source\game\room.cpp" />
   </ItemGroup>
 </Project>

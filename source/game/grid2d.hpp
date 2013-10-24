@@ -15,7 +15,7 @@ namespace detail {
     struct grid_iterator_value {
         using index_t = bklib::index2d<size_t>;
 
-        grid_iterator_value operator=(grid_iterator_value const&) = delete;    
+        grid_iterator_value operator=(grid_iterator_value const&) = delete;
 
         grid_iterator_value(T& value, index_t i) BK_NOEXCEPT
           : value {value}
@@ -41,7 +41,7 @@ namespace detail {
     struct grid_iterator_traits {
         using base      = typename std::vector<T>::iterator;
         using value     = grid_iterator_value<T>;
-        using traversal = boost::random_access_traversal_tag;    
+        using traversal = boost::random_access_traversal_tag;
         using reference = value;
     };
 
@@ -93,6 +93,8 @@ public:
     friend class boost::iterator_core_access;
 
     typename iterator_adaptor::reference dereference() const {
+        BK_ASSERT(width_ > 0 && height_ > 0);
+
         auto const d = std::div(
             static_cast<intmax_t>(pos_), static_cast<intmax_t>(width_)
         );
@@ -104,10 +106,10 @@ public:
     }
 
     void advance(typename iterator_adaptor::difference_type n) {
+        BK_ASSERT(pos_ + n <= width_ * height_);
+
         base_reference() = base() + n;
         pos_ += n;
-
-        BK_ASSERT(pos_ <= width_ * height_);
     }
 
     void decrement() {
@@ -117,7 +119,7 @@ public:
     void increment() {
         advance(1);
     }
-   
+
     size_t pos_;
     size_t width_;
     size_t height_;
@@ -180,9 +182,9 @@ using const_grid_iterator = grid_iterator<T const>;
 //        if (pos_ + n == width_ + height_) {
 //            base_reference() = base() + n;
 //        } else {
-//            base_reference() = base() + n + dy*(stride_ - width_ + 1);    
+//            base_reference() = base() + n + dy*(stride_ - width_ + 1);
 //        }
-//        
+//
 //        pos_ += n;
 //    }
 //
@@ -193,10 +195,10 @@ using const_grid_iterator = grid_iterator<T const>;
 //    void increment() {
 //        advance(+1);
 //    }
-//   
+//
 //    size_t pos_;
 //    size_t offset_;
-//    size_t stride_; 
+//    size_t stride_;
 //
 //    IndexType width_;
 //    IndexType height_;
@@ -217,11 +219,45 @@ public:
     //using sub_iterator       = grid_sub_itererator<T,       IndexType>;
     //using const_sub_iterator = grid_sub_itererator<T const, IndexType>;
 
+    grid2d(grid2d const&) = delete;
+    grid2d& operator=(grid2d const&) = delete;
+
+    grid2d(grid2d&& other)
+      : width_(other.width_)
+      , height_(other.height_)
+      , data_(std::move(other.data_))
+    {
+    }
+
+    grid2d& operator=(grid2d&& rhs) {
+        rhs.swap(*this);
+        return *this;
+    }
+
+    void swap(grid2d& other) {
+        using std::swap;
+        swap(width_, other.width_);
+        swap(height_, other.height_);
+        swap(data_, other.data_);
+    }
+
     grid2d(index_t const w, index_t const h, T const value = T {})
       : width_{w}
       , height_{h}
-      , data_(static_cast<size_t>(w*h), value)
+      , data_(w*h, value)
     {
+    }
+
+    size_t width()    const BK_NOEXCEPT { return width_; }
+    size_t height()   const BK_NOEXCEPT { return height_; }
+    size_t size()     const BK_NOEXCEPT { return width() * height(); }
+
+    size_t mem_size() const BK_NOEXCEPT {
+        auto const c = sizeof(grid2d);
+        auto const x = sizeof(T);
+        auto const n = size();
+
+        return n*x + c;
     }
 
     reference operator[](index i) {
@@ -244,7 +280,7 @@ public:
 
     //    BK_ASSERT(pb.x < width_);
     //    BK_ASSERT(pb.y < height_);
-    //    
+    //
     //    auto const w = pb.x - pa.x;
     //    auto const h = pb.y - pa.y;
 

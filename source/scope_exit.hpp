@@ -8,11 +8,11 @@ template <typename F>
 struct scope_exit {
     scope_exit(F f) : f {f}, canceled {false} {}
     ~scope_exit() { if (!canceled) f(); }
-    
+
     void cancel() {
         canceled = true;
     }
-    
+
     bool canceled;
     F f;
 };

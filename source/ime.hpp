@@ -38,7 +38,7 @@ public:
     struct info {
         line_style style;
         attribute  attr;
-        
+
         platform_string::const_iterator begin;
         platform_string::const_iterator end;
     };

@@ -12,7 +12,7 @@ class mouse {
 public:
     BK_DECLARE_EVENT(on_enter, void(int x, int y));
     BK_DECLARE_EVENT(on_exit,  void(int x, int y));
-    
+
     BK_DECLARE_EVENT(on_move,    void(int dx, int dy));
     BK_DECLARE_EVENT(on_move_to, void(int dx, int dy));
 };
@@ -21,7 +21,7 @@ class platform_window {
 public:
     class impl_t_;
     friend impl_t_;
-    
+
     enum class state {
         starting, running, finished_error, finished_ok
     };
@@ -41,7 +41,7 @@ public:
     void listen(mouse::on_exit    callback);
     void listen(mouse::on_move    callback);
     void listen(mouse::on_move_to callback);
-    
+
     void listen(ime_candidate_list::on_begin  callback);
     void listen(ime_candidate_list::on_update callback);
     void listen(ime_candidate_list::on_end    callback);

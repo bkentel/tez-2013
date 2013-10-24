@@ -27,7 +27,7 @@ namespace {
     T* get_user_data(HWND hWnd) {
         ::SetLastError(0);
         auto const result = ::GetWindowLongPtrW(hWnd, GWLP_USERDATA);
-        
+
         if (result == 0) {
             auto const e = ::GetLastError();
             if (e != 0) {
@@ -81,10 +81,10 @@ void window::push_event_(invocable event) {
 namespace {
     void init_com() {
         BK_THROW_ON_COM_FAIL(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
-    
+
         bklib::win::com_ptr<IGlobalOptions> options {[] {
             IGlobalOptions* result = nullptr;
-    
+
             BK_THROW_ON_COM_FAIL(::CoCreateInstance(CLSID_GlobalOptions,
                 nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&result))
             );
@@ -103,7 +103,7 @@ void window::init_() {
         ::HeapSetInformation(nullptr, HeapEnableTerminationOnCorruption, nullptr, 0);
 
         init_com();
-        
+
         auto const result = ::ImmDisableIME(static_cast<DWORD>(-1));
         if (result == FALSE) {
             BK_THROW_WINAPI(ImmDisableIME);
@@ -171,7 +171,7 @@ HWND window::create_window_(window* win) {
     init_();
 
     std::promise<HWND> promise_window;
-    std::future<HWND>  future_window = promise_window.get_future(); 
+    std::future<HWND>  future_window = promise_window.get_future();
 
     push_job_([&] {
         auto const instance = ::GetModuleHandleW(nullptr);
@@ -205,7 +205,7 @@ HWND window::create_window_(window* win) {
             instance,
             win
         );
-        
+
         if (result == nullptr) {
             BK_THROW_WINAPI(CreateWindowExW);
         }
@@ -218,7 +218,7 @@ HWND window::create_window_(window* win) {
     return future_window.get();
 }
 //------------------------------------------------------------------------------
-LRESULT CALLBACK window::wnd_proc_(HWND hWnd, UINT const uMsg, WPARAM wParam, LPARAM lParam) 
+LRESULT CALLBACK window::wnd_proc_(HWND hWnd, UINT const uMsg, WPARAM wParam, LPARAM lParam)
 try {
     if (uMsg == WM_NCCREATE) {
         auto const create_struct = reinterpret_cast<LPCREATESTRUCTW const>(lParam);
@@ -262,7 +262,7 @@ LRESULT window::local_wnd_proc_(UINT const uMsg, WPARAM const wParam, LPARAM con
         push_event_([=] {
             auto const x = static_cast<int>(lParam & 0xFFFF);
             auto const y = static_cast<int>(lParam >> 16);
-            
+
             //if (pw_.on_mouse_move_to_) pw_.on_mouse_move_to_(x, y);
             //event_mouse_move(x, y);
         });
@@ -271,14 +271,14 @@ LRESULT window::local_wnd_proc_(UINT const uMsg, WPARAM const wParam, LPARAM con
         push_event_([=] {
             RECT r;
             ::GetClientRect(handle(), &r);
-            
+
             //event_size(r.right - r.left, r.bottom - r.top);
         });
         break;
     default :
         break;
     }
-    
+
     return ::DefWindowProcW(window_.get(), uMsg, wParam, lParam);
 }
 //------------------------------------------------------------------------------

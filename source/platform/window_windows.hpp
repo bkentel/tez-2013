@@ -19,7 +19,7 @@ struct hwnd_deleter {
 using window_handle = std::unique_ptr<HWND, hwnd_deleter>;
 
 //!=============================================================================
-//! 
+//!
 //!=============================================================================
 class platform_window::impl_t_ {
     impl_t_(impl_t_ const&) = delete;
@@ -60,17 +60,17 @@ private:
     on_close  on_close_;
     on_resize on_resize_;
 
-    LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);   
+    LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
     static LRESULT CALLBACK wnd_proc_(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static HWND create_window_(impl_t_* win);
 
     static void push_job_(invocable job);
     static void push_event_(invocable event);
-   
+
     static void main_();
     static void init_();
-    
+
     static concurrent_queue<invocable> work_queue_;
     static concurrent_queue<invocable> event_queue_;
     //static bool running_;

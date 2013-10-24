@@ -14,7 +14,7 @@
 #   include <ObjIdl.h>
 
 namespace bklib { namespace win {
-    
+
     struct windows_error : virtual platform_error {};
     struct com_error : virtual windows_error {};
 

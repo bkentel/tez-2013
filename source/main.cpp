@@ -137,7 +137,7 @@
 //template <typename T, typename U>
 //auto intersection_of(rect<T> r, rect<U> s)
 //    -> std::pair<bool, rect<T>>
-//{   
+//{
 //    return {
 //        intersects(r, s),
 //        {
@@ -241,7 +241,7 @@
 //
 //grid<tile_type> generate_rect_room(pseudo_random_t& gen, unsigned min = 2, unsigned max = 10) {
 //    auto dist = std::uniform_int_distribution<unsigned>(min, max);
-//    
+//
 //    unsigned width  = dist(gen);
 //    unsigned height = dist(gen);
 //
@@ -260,7 +260,7 @@
 
 //template <typename T, typename IndexType>
 //struct grid_itererator_value {
-//    grid_itererator_value operator=(grid_itererator_value const&) = delete;    
+//    grid_itererator_value operator=(grid_itererator_value const&) = delete;
 //
 //    grid_itererator_value(T& value, index2d<IndexType> i) BK_NOEXCEPT
 //        : value {value}, i {i}
@@ -278,7 +278,7 @@
 //struct grid_itererator_traits {
 //    using base      = typename std::vector<T>::iterator;
 //    using value     = grid_itererator_value<T, I>;
-//    using traversal = boost::random_access_traversal_tag;    
+//    using traversal = boost::random_access_traversal_tag;
 //    using reference = value;
 //};
 //
@@ -345,7 +345,7 @@
 //    void increment() {
 //        advance(1);
 //    }
-//   
+//
 //    size_t    pos_;
 //    IndexType width_;
 //    IndexType height_;
@@ -404,9 +404,9 @@
 //        if (pos_ + n == width_ + height_) {
 //            base_reference() = base() + n;
 //        } else {
-//            base_reference() = base() + n + dy*(stride_ - width_ + 1);    
+//            base_reference() = base() + n + dy*(stride_ - width_ + 1);
 //        }
-//        
+//
 //        pos_ += n;
 //    }
 //
@@ -417,10 +417,10 @@
 //    void increment() {
 //        advance(+1);
 //    }
-//   
+//
 //    size_t pos_;
 //    size_t offset_;
-//    size_t stride_; 
+//    size_t stride_;
 //
 //    IndexType width_;
 //    IndexType height_;
@@ -431,7 +431,7 @@
 //index2d<T> north(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
 //    return {i.x, i.y - n};
 //}
-//    
+//
 //template <typename T>
 //index2d<T> south(index2d<T> i, typename std::make_signed<T>::type n = 1) BK_NOEXCEPT {
 //    return {i.x, i.y + n};
@@ -463,7 +463,7 @@
 //            auto i = intersect(ra, rb);
 //
 //            if (i.first) {
-//                
+//
 //            } else {
 //                return ra;
 //            }
@@ -503,7 +503,7 @@ struct quad_tree {
 
         child() {
             set_is_leaf();
-            
+
             auto const beg = reinterpret_cast<detail::index_t*>(&storage);
             auto const end = reinterpret_cast<detail::index_t*>(&storage) + detail::array_count;
 
@@ -540,7 +540,7 @@ struct quad_tree {
     }
 
     void insert(rect r, T data) {
-        
+
     }
 
     child root_;
@@ -554,7 +554,7 @@ struct quad_tree {
 
 struct simple_room_gen {
     using distr = std::uniform_int_distribution<unsigned>;
-    
+
     simple_room_gen(unsigned min_w, unsigned max_w, unsigned min_h, unsigned max_h)
       : dist_w_(min_w, max_w)
       , dist_h_(min_h, max_h)
@@ -587,7 +587,7 @@ struct random_placement_generator {
         BK_ASSERT(range_x > 0);
         BK_ASSERT(range_y > 0);
     }
-    
+
     std::pair<bool, rect> find_intersection(rect r, unsigned from = 0) const {
         std::pair<bool, rect> result;
 

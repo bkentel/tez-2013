@@ -14,14 +14,14 @@ public:
             std::unique_lock<std::mutex> lock(mutex_);
             elements_.push(std::move(e));
         } //unlock
-        
+
         empty_condition_.notify_all();
     }
 
     T pop() {
         std::unique_lock<std::mutex> lock(mutex_);
         while (elements_.empty()) empty_condition_.wait(lock);
-        
+
         T result = std::move(elements_.front());
         elements_.pop();
 
