@@ -195,6 +195,7 @@
     <ClInclude Include="source\config.hpp" />
     <ClInclude Include="source\exception.hpp" />
     <ClInclude Include="source\game\grid2d.hpp" />
+    <ClInclude Include="README" />
     <ClInclude Include="source\game\room.hpp" />
     <ClInclude Include="source\game\tile_data.hpp" />
     <ClInclude Include="source\ime.hpp" />

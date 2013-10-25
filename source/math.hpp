@@ -122,6 +122,13 @@ public:
         y0_ += dy; y1_ += dy;
     }
 
+    point center() const {
+        return {
+            left() + width() / 2
+          , top() + height() / 2
+        };
+    }
+
     T area() const BK_NOEXCEPT { return width()* height(); }
 
     T left()   const BK_NOEXCEPT { return x0_; }
