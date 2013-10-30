@@ -118,6 +118,10 @@ template <typename T, typename U>
 bool is_equal(T const a, U const b) {
     return a == b;
 }
+
+template <typename T>
+T square_of(T const x) { return x*x; }
+
 //!=============================================================================
 //! 2D point type.
 //!=============================================================================
@@ -198,6 +202,16 @@ public:
         BK_ASSERT(h > 0);
     }
 
+    axis_aligned_rect(point top_left, value w, value h, center_t) BK_NOEXCEPT
+      : axis_aligned_rect(
+            top_left.x - w / T{2}, top_left.y - h / T{2}
+          , top_left.x + w / T{2}, top_left.y + h / T{2}
+        )
+    {
+        BK_ASSERT(w > 0);
+        BK_ASSERT(h > 0);
+    }
+
     point get_point(top_left_t)  const BK_NOEXCEPT { return {left(),  top()}; }
     point get_point(top_right_t) const BK_NOEXCEPT { return {right(), top()}; }
     point get_point(bot_left_t)  const BK_NOEXCEPT { return {left(),  bottom()}; }
@@ -206,7 +220,7 @@ public:
     template <typename R = T>
     point get_point(center_t) const BK_NOEXCEPT {
         vector2d<R> const v = {width() / R{2}, height() / R{2}};
-        return get_point(top_left_t) + v;
+        return get_point(top_left_t{}) + v;
     }
 
     axis_aligned_rect& translate(vector const v) {
@@ -341,15 +355,15 @@ auto operator-(vector2d<T> const v) BK_NOEXCEPT
     return {-v.x, -v.y};
 }
 //------------------------------------------------------------------------------
-template <typename T>
-auto operator*(vector2d<T> const v, T const c) BK_NOEXCEPT
--> vector2d<T> {
+template <typename T, typename U>
+auto operator*(vector2d<T> const v, U const c) BK_NOEXCEPT
+-> vector2d<common_type_t<T, U>> {
     return {c * v.x, c * v.y};
 }
 //------------------------------------------------------------------------------
-template <typename T>
-auto operator*(T const c, vector2d<T> const v) BK_NOEXCEPT
--> vector2d<T> {
+template <typename T, typename U>
+auto operator*(T const c, vector2d<U> const v) BK_NOEXCEPT
+-> vector2d<common_type_t<T, U>> {
     return v * c;
 }
 //------------------------------------------------------------------------------
@@ -375,6 +389,16 @@ template <typename T>
 auto operator+(point2d<T> const p, vector2d<T> const v) BK_NOEXCEPT
 -> point2d<T> {
     return {p.x + v.x, p.y + v.y};
+}
+//------------------------------------------------------------------------------
+template <typename T>
+auto operator+(axis_aligned_rect<T> const r, vector2d<T> const v) BK_NOEXCEPT
+-> axis_aligned_rect<T> {
+    auto const p = r.get_point(axis_aligned_rect<T>::top_left_t{});
+    auto const w = r.width();
+    auto const h = r.height();
+
+    return {p + v, w, h};
 }
 //------------------------------------------------------------------------------
 template <typename T>
@@ -469,7 +493,15 @@ template <typename T>
 T area(axis_aligned_rect<T> const r) BK_NOEXCEPT {
     return r.width() * r.height();
 }
-//------------------------------------------------------------------------------
+//==============================================================================
+// Conversions.
+//==============================================================================
+template <typename R, typename T>
+auto to_type(vector2d<T> const v) BK_NOEXCEPT
+-> vector2d<R> {
+    return {static_cast<R>(v.x), static_cast<R>(v.y)};
+}
+
 //==============================================================================
 // Distances
 //==============================================================================
@@ -604,7 +636,42 @@ auto intersection_of(
     return intersection_of(r, p);
 }
 //------------------------------------------------------------------------------
+template <typename T>
+bool intersects(
+    circle<T> const a
+  , circle<T> const b
+) BK_NOEXCEPT {
+    auto const dist2 = distance2(a, b);
+    auto const r2    = a.r * a.r + b.r * b.r;
 
+    return dist2 < r2;
+}
+
+//!=============================================================================
+//! Generate a random direction vector.
+//!=============================================================================
+template <typename T = float, typename F = void>
+vector2d<T> random_direction(F& random) {
+    static float const pi2 = 2.0f * std::acos(0.0f);
+
+    auto const angle = std::uniform_real_distribution<float>(0.0f, pi2)(random);
+
+    auto const x = static_cast<T>(std::sin(angle));
+    auto const y = static_cast<T>(std::cos(angle));
+
+    return {x, y};
+}
+
+template <typename R = void, typename T = void>
+auto bounding_circle(axis_aligned_rect<T> const rect)
+-> circle<if_not_void_t<R, T>> {
+    using type = if_not_void_t<R, T>;
+
+    auto const p = rect.get_point<type>(axis_aligned_rect<T>::center_t{});
+    auto const r = std::max(rect.width(), rect.height());
+
+    return {p, r};
+}
 
 //
 //
@@ -614,54 +681,11 @@ auto intersection_of(
 //    return r.translate(v);
 //}
 //
-//template <typename T>
-//intersection_result<axis_aligned_rect<T>>
-//intersection_of(
-//    axis_aligned_rect<T> const ra
-//  , axis_aligned_rect<T> const rb
-//) BK_NOEXCEPT {
-//    auto const l = std::max(ra.left(),   rb.left());
-//    auto const r = std::min(ra.right(),  rb.right());
-//    auto const t = std::max(ra.top(),    rb.top());
-//    auto const b = std::min(ra.bottom(), rb.bottom());
-//
-//    return {
-//        (l < r) && (t < b)
-//      , {axis_aligned_rect::allow_malformed{}, l, t, r, b}
-//    };   
-//}
-//
-//template <typename T>
-//bool intersects(
-//    axis_aligned_rect<T> const ra
-//  , axis_aligned_rect<T> const rb
-//) BK_NOEXCEPT {
-//    return !(
-//        ra.right()  <  rb.left()
-//     || ra.bottom() <  rb.top()
-//     || ra.left()   >= rb.right()
-//     || ra.top()    >= rb.bottom()
-//    );
-//}
-//
-/////////
 //
 //
 
 //
-//template <typename T, typename F>
-//vector2d<T> random_direction(F& random) {
-//    static float const pi2 = 2.0f * std::acos(0.0f);
-//
-//    std::uniform_real_distribution dist(0.0f, pi2);
-//
-//    auto const angle = dist(random);
-//
-//    auto const x = static_cast<T>(std::sin(angle));
-//    auto const y = static_cast<T>(std::cos(angle));
-//
-//    return {x, y};
-//}
+
 //
 ////---------------
 //

@@ -12,7 +12,8 @@ using random = std::mt19937;
 //==============================================================================
 class room : public grid2d<tile_data> {
 public:
-    using rect = bklib::axis_aligned_rect<int>;
+    using rect  = bklib::axis_aligned_rect<int>;
+    using point = bklib::point2d<int>;
 
     room(room const&) = delete;
     room& operator=(room const&) = delete;
@@ -23,15 +24,14 @@ public:
 
     room(index_t w, index_t h,
          tile_data value = tile_data {tile_type::empty, 0, 0});
-
-
     
     rect get_rect() const {
-        return {
-            0, 0,
-            static_cast<int>(width()) - 1,
-            static_cast<int>(height()) - 1
-        };
+        auto const w = static_cast<int>(width());
+        auto const h = static_cast<int>(height());
+
+        point const p = {0, 0};
+
+        return {p, w, h};
     }
 private:
 };
@@ -152,20 +152,42 @@ struct layout_random {
         //};
     }
 
-    void insert(random& rand, room&& r) {
-        //auto const x = x_range_(rand);
-        //auto const y = x_range_(rand);
+    void insert(random& rand, room&& new_room) {
+        if (rects_.empty()) {
+            rects_.emplace_back(new_room.get_rect());
+            data_.emplace_back(std::move(new_room));
+            return;
+        }
 
-        //auto rect = bklib::translate(r.get_rect(), x, y);
-        //find_location(rect);
-        ////while (result.first) {
-        ////    result = find_location(result.second);
-        ////}
+        auto const size  = rects_.size();
+        auto const begin =
+            std::uniform_int_distribution<unsigned>(0, size)(rand);
 
-        //rects_.emplace_back(rect);
-        //data_.emplace_back(std::move(r));
+        auto const rect_new   = new_room.get_rect();
+        auto const bounds_new = bklib::bounding_circle(rect_new);
 
-        //adjust_ranges(rect);
+        for (unsigned n = 0; n < size; ++n) {
+            auto const i      = (begin + n) % size;
+            auto const bounds = bklib::bounding_circle(rects_[i]);
+            auto const dir    = bklib::random_direction(rand);
+            auto const v      = (bounds.r + bounds_new.r) * dir;
+
+            auto const test_rect = rect_new + bklib::to_type<int>(v);
+
+            bool const intersects = std::cend(rects_) != std::find_if(
+                std::cbegin(rects_), std::cend(rects_), [&](rect const& r) {
+                    return bklib::intersects(test_rect, r);
+                }
+            );
+
+            if (!intersects) {
+                rects_.emplace_back(test_rect);
+                data_.emplace_back(std::move(new_room));
+                return;
+            }
+        }
+
+        BK_DEBUG_BREAK();
     }
 
     distribution x_range_;
