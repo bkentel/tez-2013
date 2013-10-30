@@ -558,8 +558,8 @@ bool intersects(
   , axis_aligned_rect<T> const rb
 ) BK_NOEXCEPT {
     return !(
-        ra.right()  <  rb.left()
-     || ra.bottom() <  rb.top()
+        ra.right()  <= rb.left()
+     || ra.bottom() <= rb.top()
      || ra.left()   >= rb.right()
      || ra.top()    >= rb.bottom()
     );
