@@ -21,7 +21,7 @@ TEST(Math, PointAndVector) {
     ASSERT_FLOAT_EQ(1.0f, magnitude(direction<float>(p2 - p1)));
 }
 
-TEST(Math, AARectIntersections) {
+TEST(Math, AARectIntersectionsTrue) {
     using namespace bklib;
 
     axis_aligned_rect<int> const ra = {point2d<int>{0, 0}, 5, 5};
@@ -40,11 +40,47 @@ TEST(Math, AARectIntersections) {
 
     int const areas[] = {4, 6, 4, 6, 9, 6, 4, 6, 4};
 
+    axis_aligned_rect<int> const rc[] = {
+        {0, 0, 1, 1},
+        {1, 0, 3, 1},
+        {3, 0, 5, 1},
+        {0, 1, 1, 3},
+        {1, 1, 3, 3},
+        {3, 1, 5, 3},
+        {0, 3, 1, 5},
+        {1, 3, 3, 5},
+        {3, 3, 5, 5},
+    };
+
     for (int i = 0; i < 9; ++i) {
+        ASSERT_TRUE(intersects(ra, rb[i]));
         auto const ir = intersection_of(ra, rb[i]);
-        ASSERT_TRUE(!!ir);
+        ASSERT_FALSE(!ir);
+        ASSERT_TRUE(ir.result.is_well_formed());
         ASSERT_EQ(areas[i], area(ir.result));
+        ASSERT_EQ(rc[i], ir.result);
     }
+}
+
+TEST(Math, AARectIntersectionsFalse) {
+    using namespace bklib;
+
+    axis_aligned_rect<int> const r  = {0, 0, 9, 9};
+    axis_aligned_rect<int> const r1 = {9, 1, 10, 10};
+    axis_aligned_rect<int> const r2 = {1, 9, 10, 10};
+    axis_aligned_rect<int> const r3 = {9, 9, 10, 10};
+
+    ASSERT_TRUE(!intersection_of(r, r1));
+    ASSERT_TRUE(!intersection_of(r, r2));
+    ASSERT_TRUE(!intersection_of(r, r3));
+
+    ASSERT_FALSE(intersection_of(r, r1).result.is_well_formed());
+    ASSERT_FALSE(intersection_of(r, r2).result.is_well_formed());
+    ASSERT_FALSE(intersection_of(r, r3).result.is_well_formed());
+
+    ASSERT_FALSE(intersects(r, r1));
+    ASSERT_FALSE(intersects(r, r2));
+    ASSERT_FALSE(intersects(r, r3));
 }
 
 TEST(MathTest, Point2dSanity) {
