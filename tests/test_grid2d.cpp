@@ -89,6 +89,8 @@ TEST(Room, SimpleRoom) {
     auto const min_h = 3u; auto const max_h = 7u;
     generator::room_simple gen{{min_w, max_w}, {min_h, max_h}};
 
+    tez::generator::layout_random lay;
+
     for (int i = 0; i < 1000; ++i) {
         auto r = gen.generate(rand);
         ASSERT_GE(r.width(), min_w);
@@ -105,5 +107,7 @@ TEST(Room, SimpleRoom) {
             for (auto y = 0; y < r.height(); ++y)
                 ASSERT_EQ((r[{x, y}].type), tez::tile_type::wall);
         }
+
+        lay.insert(rand, std::move(r));
     }
 }

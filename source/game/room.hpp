@@ -64,7 +64,6 @@ struct room_simple {
 struct layout_random {
     using distribution = std::uniform_int_distribution<int>;
     using rect = bklib::axis_aligned_rect<int>;
-    using ptr = std::unique_ptr<room>;
 
     layout_random()
       : x_range_{-10, 10}
@@ -88,13 +87,13 @@ struct layout_random {
     
         size_t count = 0;
 
-        for (auto const r0 : rects_) {
-            auto const i = bklib::intersect(r, r0);
-            if (i.first) {
-                intersections_.emplace_back(i.second);
-                ++count;
-            }
-        }
+        //for (auto const r0 : rects_) {
+        //    auto const i = bklib::intersect(r, r0);
+        //    if (i.first) {
+        //        intersections_.emplace_back(i.second);
+        //        ++count;
+        //    }
+        //}
 
         return count;
     }
@@ -106,56 +105,74 @@ struct layout_random {
         size_t max_area = 0;
         size_t area_sum = 0;
 
-        for (auto const r : intersections_) {
-            auto const area = r.area();
-            area_sum += area;
+        //for (auto const r : intersections_) {
+        //    auto const area = r.area();
+        //    area_sum += area;
 
-            if (area > max_area) {
-                max_rect = r;
-                max_area = area;
-            }
-        }
+        //    if (area > max_area) {
+        //        max_rect = r;
+        //        max_area = area;
+        //    }
+        //}
 
         return {area_sum, max_rect};
     }
 
-    rect find_location(rect r) const {
-        auto n = fill_intersections(r);
-        if (n == 0) {
-            return r;
-        }
+    rect find_location(rect const r) const {
+        return {};
 
-        auto prev_max = get_area_and_max();
+        //auto n = fill_intersections(r);
+        //if (n == 0) return r;
 
-        auto const p0 = r.center();
-        auto const p1 = prev_max.second.center();
+        //bklib::point2d<float> vec = {0.0f, 0.0f};
+        //
+        //auto const p0 = r.center<float>();
 
-        auto const v = p0 - p1;
+        //for (auto const ir : intersections_) {
+        //    auto const p1 = ir.center<float>();
+        //    auto const v  = p0 - p1;
+        //    auto const u  = bklib::normalize(v);
+        //    vec += u;
+        //}
 
-        return r;
+        //vec = bklib::normalize(vec);
+
+        //auto const cur   = get_area_and_max();
+        //auto const& ir   = cur.second;
+        //auto const& area = cur.first;
+
+        //auto const p0 = r.center();
+        //auto const p1 = ir.center();
+        //auto const v = p0 - p1;
+
+        //return {
+        //    area, (ir.width() > ir.height())
+        //      ? bklib::translate(r, bklib::sign_of(v.x) * ir.width(), 0)
+        //      : bklib::translate(r, 0, bklib::sign_of(v.y) * ir.height())
+        //};
     }
 
-    void insert(random& rand, std::unique_ptr<room> room) {
-        auto const x = x_range_(rand);
-        auto const y = x_range_(rand);
+    void insert(random& rand, room&& r) {
+        //auto const x = x_range_(rand);
+        //auto const y = x_range_(rand);
 
-        auto rect = bklib::translate(room->get_rect(), x, y);
-        
-        if (n) {
-            rect = find_location(rect);
-        }
+        //auto rect = bklib::translate(r.get_rect(), x, y);
+        //find_location(rect);
+        ////while (result.first) {
+        ////    result = find_location(result.second);
+        ////}
 
-        rects_.emplace_back(rect);
-        data_.emplace_back(std::move(room));
+        //rects_.emplace_back(rect);
+        //data_.emplace_back(std::move(r));
 
-        adjust_ranges(rect);
+        //adjust_ranges(rect);
     }
 
     distribution x_range_;
     distribution y_range_;
 
     std::vector<rect> rects_;
-    std::vector<ptr>  data_;
+    std::vector<room> data_;
 
     std::vector<rect> mutable intersections_;
 };
