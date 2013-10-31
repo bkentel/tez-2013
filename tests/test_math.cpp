@@ -3,6 +3,26 @@
 #include <gtest/gtest.h>
 #include "math.hpp"
 
+TEST(Math, Circle) {
+    using namespace bklib;
+    using point = point2d<int>;
+
+    circle<int> c1 {{0, 0}, 10};
+    circle<int> c2 {{0, 5}, 10};
+
+    ASSERT_TRUE(intersects(c1, c2));
+    ASSERT_EQ(distance(c1, c2), 5);
+
+    auto const dist = distance<float>(c1, c2);
+    ASSERT_EQ(dist, -15);
+
+    auto const v = dist * direction<float>(c1.p - c2.p);
+    c2.p += round_toward<int>(v);
+
+    ASSERT_FLOAT_EQ(distance<float>(c1, c2), 0.0f);
+    ASSERT_FALSE(intersects(c1, c2));
+}
+
 //==============================================================================
 // Basic tests for points and vectors and their interaction.
 //==============================================================================
