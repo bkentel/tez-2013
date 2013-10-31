@@ -54,11 +54,22 @@ struct if_not_void : std::conditional<
 {
 };
 
+template <typename Test, typename T1, typename T2>
+struct if_not_void_common : std::conditional<
+    std::is_void<Test>::value, typename std::common_type<T1, T2>::type, Test
+>
+{
+};
+
 //!=============================================================================
 //! If @c Test is @c void, @c Default, otherwise @c Test.
 //!=============================================================================
 template <typename Test, typename Default>
 using if_not_void_t = typename if_not_void<Test, Default>::type;
+
+template <typename Test, typename T1, typename T2>
+using if_not_void_common_t = typename if_not_void_common<Test, T1, T2>::type;
+
 
 //!=============================================================================
 //! Return (-1, 0, 1) corresponding to the sign of @c x.
@@ -218,7 +229,7 @@ public:
     point get_point(bot_right_t) const BK_NOEXCEPT { return {right(), bottom()}; }
 
     template <typename R = T>
-    point get_point(center_t) const BK_NOEXCEPT {
+    point2d<R> get_point(center_t) const BK_NOEXCEPT {
         vector2d<R> const v = {width() / R{2}, height() / R{2}};
         return get_point(top_left_t{}) + v;
     }
@@ -379,15 +390,15 @@ auto operator/(U const c, vector2d<T> const v) BK_NOEXCEPT
     return v / c;
 }
 //------------------------------------------------------------------------------
-template <typename T>
-auto operator+(vector2d<T> const u, vector2d<T> const v) BK_NOEXCEPT
--> vector2d<T> {
+template <typename T, typename U>
+auto operator+(vector2d<T> const u, vector2d<U> const v) BK_NOEXCEPT
+-> vector2d<common_type_t<T, U>> {
     return {u.x + v.x, u.y + v.y};
 }
 //------------------------------------------------------------------------------
-template <typename T>
-auto operator+(point2d<T> const p, vector2d<T> const v) BK_NOEXCEPT
--> point2d<T> {
+template <typename T, typename U>
+auto operator+(point2d<T> const p, vector2d<U> const v) BK_NOEXCEPT
+-> point2d<common_type_t<T, U>> {
     return {p.x + v.x, p.y + v.y};
 }
 //------------------------------------------------------------------------------
@@ -413,9 +424,9 @@ auto operator-(point2d<T> const p, vector2d<T> const v) BK_NOEXCEPT
     return {p.x - v.x, p.y - v.y};
 }
 //------------------------------------------------------------------------------
-template <typename T>
-auto operator-(point2d<T> const p, point2d<T> const q) BK_NOEXCEPT
--> vector2d<T> {
+template <typename T, typename U>
+auto operator-(point2d<T> const p, point2d<U> const q) BK_NOEXCEPT
+-> vector2d<common_type_t<T, U>> {
     return {p.x - q.x, p.y - q.y};
 }
 //------------------------------------------------------------------------------
@@ -461,16 +472,17 @@ auto operator-=(point2d<T>& lhs, vector2d<T> const rhs) BK_NOEXCEPT
 //==============================================================================
 // Other operators.
 //==============================================================================
-template <typename R = void, typename T = void>
-auto dot(vector2d<T> const u, vector2d<T> const v) BK_NOEXCEPT
--> if_not_void_t<R, T> {
-    return if_not_void_t<R, T> {u.x * v.x};
+template <typename R = void, typename T = void, typename U = void>
+auto dot(vector2d<T> const u, vector2d<U> const v) BK_NOEXCEPT
+-> if_not_void_common_t<R, T, U> {
+    return if_not_void_common_t<R, T, U> {u.x * v.x + u.y * v.y};
 }
 //------------------------------------------------------------------------------
 template <typename R = void, typename T = void>
 auto dot(vector2d<T> const v) BK_NOEXCEPT
 -> if_not_void_t<R, T> {
-    return dot<if_not_void_t<R, T>>(v, v);
+    using type = if_not_void_t<R, T>;
+    return static_cast<type>(dot(v, v));
 }
 //------------------------------------------------------------------------------
 template <typename R = void, typename T = void>
@@ -502,22 +514,28 @@ auto to_type(vector2d<T> const v) BK_NOEXCEPT
     return {static_cast<R>(v.x), static_cast<R>(v.y)};
 }
 
+template <typename R, typename T>
+auto to_type(point2d<T> const p) BK_NOEXCEPT
+-> point2d<R> {
+    return {static_cast<R>(p.x), static_cast<R>(p.y)};
+}
+
 //==============================================================================
 // Distances
 //==============================================================================
 //------------------------------------------------------------------------------
 // point <-> point
 //------------------------------------------------------------------------------
-template <typename T>
-auto distance2(point2d<T> const a, point2d<T> const b) BK_NOEXCEPT
--> T {
+template <typename T, typename U>
+auto distance2(point2d<T> const a, point2d<U> const b) BK_NOEXCEPT
+-> common_type_t<T, U> {
     return dot(a - b);
 }
 //------------------------------------------------------------------------------
-template <typename R = void, typename T = void>
-auto distance(point2d<T> const a, point2d<T> const b) BK_NOEXCEPT
--> if_not_void_t<R, T> {
-    using result_t = if_not_void_t<R, T>;
+template <typename R = void, typename T = void, typename U = void>
+auto distance(point2d<T> const a, point2d<U> const b) BK_NOEXCEPT
+-> if_not_void_t<R, common_type_t<T, U>> {
+    using result_t = if_not_void_t<R, common_type_t<T, U>>;
 
     return static_cast<result_t>(
         std::sqrt(distance2(a, b))
@@ -526,19 +544,13 @@ auto distance(point2d<T> const a, point2d<T> const b) BK_NOEXCEPT
 //------------------------------------------------------------------------------
 // circle <-> circle
 //------------------------------------------------------------------------------
-template <typename T>
-auto distance2(circle<T> const a, circle<T> const b) BK_NOEXCEPT
--> T {
-    return dot(a.p - b.p);
-}
-//------------------------------------------------------------------------------
-template <typename R = void, typename T = void>
-auto distance(circle<T> const a, circle<T> const b) BK_NOEXCEPT
--> if_not_void_t<R, T> {
+template <typename R = void, typename T = void, typename U = void>
+auto distance(circle<T> const a, circle<U> const b) BK_NOEXCEPT
+-> if_not_void_t<R, common_type_t<T, U>> {
     using result_t = if_not_void_t<R, T>;
 
     return static_cast<result_t>(
-        std::sqrt(distance2(a.p, b.p))
+        std::sqrt(dot(a.p - b.p)) - a.r - b.r
     );
 }
 //------------------------------------------------------------------------------
@@ -662,27 +674,106 @@ vector2d<T> random_direction(F& random) {
     return {x, y};
 }
 
+namespace detail {
+    template <typename R, bool I = std::is_integral<R>::value, bool F = std::is_floating_point<R>::value>
+    struct bounding_circle_radius_t;
+    
+    template <typename R>
+    struct bounding_circle_radius_t<R, true, false> {
+        template <typename T, typename U>
+        static R radius(point2d<T> const p, point2d<U> const q) {
+            return static_cast<R>(std::ceil(distance<float>(p, q)));
+        }
+    };
+
+    template <typename R>
+    struct bounding_circle_radius_t<R, false, true> {
+        template <typename T, typename U>
+        static R radius(point2d<T> const p, point2d<U> const q) {
+            return distance<R>(p, q);
+        }
+    };
+
+} //namespace detail
+
 template <typename R = void, typename T = void>
 auto bounding_circle(axis_aligned_rect<T> const rect)
 -> circle<if_not_void_t<R, T>> {
     using type = if_not_void_t<R, T>;
 
-    auto const p = rect.get_point<type>(axis_aligned_rect<T>::center_t{});
-    auto const r = std::max(rect.width(), rect.height());
+    auto const p = rect.get_point<float>(axis_aligned_rect<T>::center_t{});
+    auto const q = rect.get_point(axis_aligned_rect<T>::top_left_t{});
+    auto const r = detail::bounding_circle_radius_t<type>::radius(p, q);
 
-    return {p, r};
+    return {to_type<type>(p), r};
 }
 
-//
-//
-//template <typename T>
-//axis_aligned_rect<T> translate(axis_aligned_rect<T> const r, vector2d<T> const v) {
-//    auto result = r;
-//    return r.translate(v);
-//}
-//
-//
-//
+
+
+template <typename T>
+auto translate(axis_aligned_rect<T> const r, vector2d<T> const v)
+-> axis_aligned_rect<T> {
+    auto const p = r.get_point(axis_aligned_rect<T>::center_t{});
+    return {p + v, r.width(), r.height()};
+}
+
+
+template <typename T>
+auto translate(circle<T> const c, vector2d<T> const v)
+-> circle<T> {
+    return {c.p + v, c.r};
+}
+
+template <typename R, typename T, enable_for_floating_point_t<T>* = 0>
+point2d<R> ceil(point2d<T> const p) {
+    return {static_cast<R>(std::ceil(p.x)), static_cast<R>(std::ceil(p.y))};
+}
+
+template <typename R, typename T, enable_for_integral_t<T>* = 0>
+point2d<R> ceil(point2d<T> const p) {
+    return p;
+}
+
+namespace detail {
+    template <typename T, bool F = std::is_floating_point<T>::value>
+    struct ceil {
+        template <typename R, typename U>
+        static point2d<R> value(point2d<U> const p) {
+            auto const x = p.x;
+            auto const y = p.y;
+            return {static_cast<R>(x), static_cast<R>(y)};
+        }
+
+        template <typename R, typename U>
+        static vector2d<R> value(vector2d<U> const v) {
+            auto const x = v.x;
+            auto const y = v.y;
+            return {static_cast<R>(x), static_cast<R>(y)};
+        }
+    };
+
+    template <typename T>
+    struct ceil<T, true> {
+        template <typename R, typename U>
+        static point2d<R> value(point2d<U> const p) {
+            auto const x = std::ceil(p.x);
+            auto const y = std::ceil(p.x);
+            return {static_cast<R>(x), static_cast<R>(y)};
+        }
+
+        template <typename R, typename U>
+        static vector2d<R> value(vector2d<U> const v) {
+            auto const x = std::ceil(v.x);
+            auto const y = std::ceil(v.x);
+            return {static_cast<R>(x), static_cast<R>(y)};
+        }
+    };
+}
+
+template <typename R, typename T>
+vector2d<R> ceil(vector2d<T> const v) {
+    return detail::ceil<T>::value<R>(v);
+}
 
 //
 
