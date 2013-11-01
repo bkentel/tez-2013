@@ -7,6 +7,17 @@
 
 namespace bklib {
 
+struct point_tl {};
+struct point_tr {};
+struct point_bl {};
+struct point_br {};
+struct point_center {};
+
+struct side_top {};
+struct side_bottom {};
+struct side_left {};
+struct side_right {};
+
 template <typename Test, typename Type = void>
 using enable_for_floating_point_t = typename std::enable_if<
     std::is_floating_point<Test>::value, Type
@@ -151,20 +162,29 @@ struct circle {
     point2d<T> p;
     T r;
 };
+
+namespace detail {
+    struct axis_aligned_rect_base {
+        struct allow_malformed {};
+
+        template <typename T, typename Tag>
+        struct tagged_point {
+            tagged_point(T x, T y) : value{{x, y}} {}
+            tagged_point(point2d<T> p) : value{{p.x, p.y}} {}
+            point2d<T> value;
+        };
+
+        struct tag_tl_point;
+        struct tag_tr_point;
+        struct tag_bl_point;
+        struct tag_br_point;
+        struct tag_center_point;
+    };
+} //namespace detail
+
 //!=============================================================================
 //! Axis-aligned rectangle type.
 //!=============================================================================
-namespace detail {
-struct axis_aligned_rect_base {
-    struct allow_malformed {};
-    struct top_left_t {};
-    struct top_right_t {};
-    struct bot_left_t {};
-    struct bot_right_t {};
-    struct center_t {};
-};
-} //namespace detail
-
 template <typename T>
 class axis_aligned_rect : public detail::axis_aligned_rect_base {
 public:
@@ -172,24 +192,21 @@ public:
     using point  = point2d<T>;
     using vector = vector2d<T>;
 
-    axis_aligned_rect(
-        allow_malformed
-      , value x0, value y0, value x1, value y1
-    ) BK_NOEXCEPT
+    axis_aligned_rect(allow_malformed, T x0, T y0, T x1, T y1) BK_NOEXCEPT
       : x0_{x0}, y0_{y0}, x1_{x1}, y1_{y1}
     {
+    }
+
+    axis_aligned_rect(T x0, T y0, T x1, T y1) BK_NOEXCEPT
+      : axis_aligned_rect(allow_malformed{}, x0, y0, x1, y1)
+    {
+        BK_ASSERT(x1 > x0);
+        BK_ASSERT(y1 > y0);
     }
 
     axis_aligned_rect() BK_NOEXCEPT
       : axis_aligned_rect(allow_malformed{}, T{0}, T{0}, T{0}, T{0})
     {
-    }
-
-    axis_aligned_rect(value x0, value y0, value x1, value y1) BK_NOEXCEPT
-      : x0_{x0}, y0_{y0}, x1_{x1}, y1_{y1}
-    {
-        BK_ASSERT(x1 > x0);
-        BK_ASSERT(y1 > y0);
     }
 
     axis_aligned_rect(std::initializer_list<value> list) BK_NOEXCEPT
@@ -203,35 +220,22 @@ public:
         BK_ASSERT(list.size() == 4);
     }
 
-    axis_aligned_rect(point top_left, value w, value h) BK_NOEXCEPT
-      : axis_aligned_rect(
-            top_left.x, top_left.y
-          , top_left.x + w, top_left.y + h
-        )
+    using tl_point     = tagged_point<T, tag_tl_point>;
+    using tr_point     = tagged_point<T, tag_tr_point>;
+    using bl_point     = tagged_point<T, tag_bl_point>;
+    using br_point     = tagged_point<T, tag_br_point>;
+    using center_point = tagged_point<T, tag_center_point>;
+
+    axis_aligned_rect(tl_point p, value w, value h) BK_NOEXCEPT
+      : axis_aligned_rect(p.value, w, h)
     {
         BK_ASSERT(w > 0);
         BK_ASSERT(h > 0);
     }
 
-    axis_aligned_rect(point top_left, value w, value h, center_t) BK_NOEXCEPT
-      : axis_aligned_rect(
-            top_left.x - w / T{2}, top_left.y - h / T{2}
-          , top_left.x + w / T{2}, top_left.y + h / T{2}
-        )
+    axis_aligned_rect(center_point p, value w, value h) BK_NOEXCEPT
+      : axis_aligned_rect(p.value - vector2d<T>{w / T{2}, h / T{2}}, w, h)
     {
-        BK_ASSERT(w > 0);
-        BK_ASSERT(h > 0);
-    }
-
-    point get_point(top_left_t)  const BK_NOEXCEPT { return {left(),  top()}; }
-    point get_point(top_right_t) const BK_NOEXCEPT { return {right(), top()}; }
-    point get_point(bot_left_t)  const BK_NOEXCEPT { return {left(),  bottom()}; }
-    point get_point(bot_right_t) const BK_NOEXCEPT { return {right(), bottom()}; }
-
-    template <typename R = T>
-    point2d<R> get_point(center_t) const BK_NOEXCEPT {
-        vector2d<R> const v = {width() / R{2}, height() / R{2}};
-        return get_point(top_left_t{}) + v;
     }
 
     axis_aligned_rect& translate(vector const v) {
@@ -241,18 +245,35 @@ public:
         return *this;
     }
 
+    T width()  const BK_NOEXCEPT { return right()  - left(); }
+    T height() const BK_NOEXCEPT { return bottom() - top();  }
+
     T left()   const BK_NOEXCEPT { return x0_; }
     T right()  const BK_NOEXCEPT { return x1_; }
     T top()    const BK_NOEXCEPT { return y0_; }
     T bottom() const BK_NOEXCEPT { return y1_; }
 
-    T width()  const BK_NOEXCEPT { return right()  - left(); }
-    T height() const BK_NOEXCEPT { return bottom() - top();  }
+    point top_left()     const BK_NOEXCEPT { return {left(),  top()}; }
+    point top_right()    const BK_NOEXCEPT { return {right(), top()}; }
+    point bottom_left()  const BK_NOEXCEPT { return {left(),  bottom()}; }
+    point bottom_right() const BK_NOEXCEPT { return {right(), bottom()}; }
+
+    template <typename R = T>
+    point2d<R> center() const BK_NOEXCEPT {
+        R const x = left() + width()  / R{2};
+        R const y = top()  + height() / R{2};
+        return {x, y};
+    }
 
     bool is_well_formed() const BK_NOEXCEPT {
         return (left() < right()) && (top() < bottom());
     }
 private:
+    axis_aligned_rect(point p, value w, value h) BK_NOEXCEPT
+        : axis_aligned_rect(p.x, p.y, p.x + w, p.y + h)
+    {
+    }
+
     T x0_, x1_;
     T y0_, y1_;
 };
@@ -450,7 +471,7 @@ template <typename T>
 auto operator+=(point2d<T>& lhs, vector2d<T> const rhs) BK_NOEXCEPT
 -> point2d<T>& {
     lhs.x += rhs.x;
-    rhs.y += rhs.y;
+    lhs.y += rhs.y;
     return lhs;
 }
 //------------------------------------------------------------------------------
@@ -577,6 +598,35 @@ auto distance2(
 // Intersections
 //==============================================================================
 //------------------------------------------------------------------------------
+// point <-> circle intersection.
+//------------------------------------------------------------------------------
+template <typename T>
+auto intersects(circle<T> const c, point2d<T> const p) BK_NOEXCEPT
+-> bool {
+    return distance2(p, c.p) < square_of(c.r);
+}
+
+template <typename T>
+auto intersects(point2d<T> const p, circle<T> const c) BK_NOEXCEPT
+-> bool {
+    return intersects(c, p);
+}
+
+//------------------------------------------------------------------------------
+// axis_aligned_rect <-> circle intersection.
+//------------------------------------------------------------------------------
+template <typename T>
+auto intersects(axis_aligned_rect<T> const r, circle<T> const c) BK_NOEXCEPT
+-> bool {
+    return intersects(bounding_circle<T>(r), c) && (
+        intersects(c, r.top_left())
+     || intersects(c, r.top_right())
+     || intersects(c, r.bottom_left())
+     || intersects(c, r.bottom_right())
+    );
+}
+
+//------------------------------------------------------------------------------
 // axis_aligned_rect <-> axis_aligned_rect intersection.
 //------------------------------------------------------------------------------
 template <typename T>
@@ -653,10 +703,10 @@ bool intersects(
     circle<T> const a
   , circle<T> const b
 ) BK_NOEXCEPT {
-    auto const dist2 = distance2(a, b);
-    auto const r2    = a.r * a.r + b.r * b.r;
+    auto const dist = distance2(a.p, b.p);
+    auto const r    = square_of(a.r + b.r);
 
-    return dist2 < r2;
+    return dist < r;
 }
 
 //!=============================================================================
@@ -674,52 +724,62 @@ vector2d<T> random_direction(F& random) {
     return {x, y};
 }
 
-namespace detail {
-    template <typename R, bool I = std::is_integral<R>::value, bool F = std::is_floating_point<R>::value>
-    struct bounding_circle_radius_t;
-    
-    template <typename R>
-    struct bounding_circle_radius_t<R, true, false> {
-        template <typename T, typename U>
-        static R radius(point2d<T> const p, point2d<U> const q) {
-            return static_cast<R>(std::ceil(distance<float>(p, q)));
-        }
-    };
+//!=============================================================================
+//! Floating -> Integral : round to next most negative / positive integer.
+//! Floating -> Floating : type cast.
+//! Integral -> Integral : type cast.
+//! Integral -> Floating : type cast.
+//!=============================================================================
+template <typename Result, typename Source, 
+    typename std::enable_if<
+        std::is_integral<Result>::value
+     && std::is_floating_point<Source>::value
+    >::type* = 0
+>
+Result round_up_if_integral(Source const x) BK_NOEXCEPT {
+    return (x >= Source{0})
+      ? static_cast<Result>(std::ceil(x))
+      : static_cast<Result>(std::floor(x));
+}
+//------------------------------------------------------------------------------
+template <typename Result, typename Source,
+    typename std::enable_if<!(
+        std::is_integral<Result>::value
+     && std::is_floating_point<Source>::value
+    )>::type* = 0
+>
+Result round_up_if_integral(Source const x) BK_NOEXCEPT {
+    return static_cast<Result>(x);
+}
 
-    template <typename R>
-    struct bounding_circle_radius_t<R, false, true> {
-        template <typename T, typename U>
-        static R radius(point2d<T> const p, point2d<U> const q) {
-            return distance<R>(p, q);
-        }
-    };
-
-} //namespace detail
-
-template <typename R = void, typename T = void>
+//!=============================================================================
+//! Return the circle that rect can be inscribed in.
+//!=============================================================================
+template <typename R = float, typename T = void>
 auto bounding_circle(axis_aligned_rect<T> const rect)
--> circle<if_not_void_t<R, T>> {
-    using type = if_not_void_t<R, T>;
+-> circle<R> {
+    auto const p = rect.center<float>();
+    auto const q = to_type<float>(rect.top_left());
+    auto const r = round_up_if_integral<R>(distance(p, q));
 
-    auto const p = rect.get_point<float>(axis_aligned_rect<T>::center_t{});
-    auto const q = rect.get_point(axis_aligned_rect<T>::top_left_t{});
-    auto const r = detail::bounding_circle_radius_t<type>::radius(p, q);
-
-    return {to_type<type>(p), r};
+    return {to_type<R>(p), r};
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Translations
+////////////////////////////////////////////////////////////////////////////////
 
-
+//! Translate an axis_aligned_rect.
 template <typename T>
-auto translate(axis_aligned_rect<T> const r, vector2d<T> const v)
+auto translate(axis_aligned_rect<T> const r, vector2d<T> const v) BK_NOEXCEPT
 -> axis_aligned_rect<T> {
-    auto const p = r.get_point(axis_aligned_rect<T>::center_t{});
-    return {p + v, r.width(), r.height()};
+    auto const p = axis_aligned_rect<T>::tl_point{r.top_left() + v};
+    return {p, r.width(), r.height()};
 }
 
-
+//! Translate a circle.
 template <typename T>
-auto translate(circle<T> const c, vector2d<T> const v)
+auto translate(circle<T> const c, vector2d<T> const v) BK_NOEXCEPT
 -> circle<T> {
     return {c.p + v, c.r};
 }
@@ -734,45 +794,26 @@ point2d<R> ceil(point2d<T> const p) {
     return p;
 }
 
-namespace detail {
-    template <typename T, bool F = std::is_floating_point<T>::value>
-    struct ceil {
-        template <typename R, typename U>
-        static point2d<R> value(point2d<U> const p) {
-            auto const x = p.x;
-            auto const y = p.y;
-            return {static_cast<R>(x), static_cast<R>(y)};
-        }
+template <typename R, typename T>
+vector2d<R> round_toward(vector2d<T> const v) {
+    static_assert(std::is_integral<R>::value, "must be integral");
+    static_assert(std::is_floating_point<T>::value, "must be floating");
 
-        template <typename R, typename U>
-        static vector2d<R> value(vector2d<U> const v) {
-            auto const x = v.x;
-            auto const y = v.y;
-            return {static_cast<R>(x), static_cast<R>(y)};
-        }
-    };
+    auto const x = v.x >= T{0} ? std::ceil(v.x) : std::floor(v.x);
+    auto const y = v.y >= T{0} ? std::ceil(v.y) : std::floor(v.y);
 
-    template <typename T>
-    struct ceil<T, true> {
-        template <typename R, typename U>
-        static point2d<R> value(point2d<U> const p) {
-            auto const x = std::ceil(p.x);
-            auto const y = std::ceil(p.x);
-            return {static_cast<R>(x), static_cast<R>(y)};
-        }
-
-        template <typename R, typename U>
-        static vector2d<R> value(vector2d<U> const v) {
-            auto const x = std::ceil(v.x);
-            auto const y = std::ceil(v.x);
-            return {static_cast<R>(x), static_cast<R>(y)};
-        }
-    };
+    return {static_cast<R>(x), static_cast<R>(y)};
 }
 
-template <typename R, typename T>
-vector2d<R> ceil(vector2d<T> const v) {
-    return detail::ceil<T>::value<R>(v);
+template <typename R, typename T, typename U>
+point2d<R> round_toward(point2d<T> const p, vector2d<U> const v) {
+    static_assert(std::is_integral<R>::value, "must be integral");
+    static_assert(std::is_floating_point<T>::value, "must be floating");
+
+    auto const x = v.x >= T{0} ? std::ceil(p.x) : std::floor(p.x);
+    auto const y = v.y >= T{0} ? std::ceil(p.y) : std::floor(p.y);
+
+    return {static_cast<R>(x), static_cast<R>(y)};
 }
 
 //

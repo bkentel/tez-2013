@@ -11,7 +11,8 @@ TEST(Math, Circle) {
     circle<int> c2 {{0, 5}, 10};
 
     ASSERT_TRUE(intersects(c1, c2));
-    ASSERT_EQ(distance(c1, c2), 5);
+    ASSERT_EQ(distance(c1, c2), -15);
+    ASSERT_EQ(distance(c1.p, c2.p), 5);
 
     auto const dist = distance<float>(c1, c2);
     ASSERT_EQ(dist, -15);
@@ -21,6 +22,23 @@ TEST(Math, Circle) {
 
     ASSERT_FLOAT_EQ(distance<float>(c1, c2), 0.0f);
     ASSERT_FALSE(intersects(c1, c2));
+}
+
+TEST(Math, BoundingCircle) {
+    using namespace bklib;
+    using rect = axis_aligned_rect<int>;
+
+    auto const wa = 10;
+    auto const ha = 5;
+    auto const ra = rect{0, 0, 10, 5};
+
+    auto const expected_rad_a = std::sqrt(square_of(wa / 2.0f) + square_of(ha / 2.0f));
+
+    auto const ca_float = bounding_circle(ra);
+    auto const ca_int   = bounding_circle<int>(ra);
+
+    ASSERT_FLOAT_EQ(expected_rad_a, ca_float.r);
+    ASSERT_GE(ca_int.r, ca_float.r);
 }
 
 //==============================================================================
@@ -61,7 +79,7 @@ TEST(Math, AARectIntersectionsSimple) {
     auto const br = point2d<int>{x + w, y + h};
 
     using rect = axis_aligned_rect<int>;
-    auto const r = rect{tl, w, h};
+    auto const r = rect{rect::tl_point{tl}, w, h};
 
     ASSERT_TRUE(r.is_well_formed());
 
@@ -70,10 +88,10 @@ TEST(Math, AARectIntersectionsSimple) {
     ASSERT_EQ(r.right(),  br.x);
     ASSERT_EQ(r.bottom(), br.y);
 
-    ASSERT_EQ(tl, r.get_point(rect::top_left_t{}));
-    ASSERT_EQ(tr, r.get_point(rect::top_right_t{}));
-    ASSERT_EQ(bl, r.get_point(rect::bot_left_t{}));
-    ASSERT_EQ(br, r.get_point(rect::bot_right_t{}));
+    ASSERT_EQ(tl, r.top_left());
+    ASSERT_EQ(tr, r.top_right());
+    ASSERT_EQ(bl, r.bottom_left());
+    ASSERT_EQ(br, r.bottom_right());
 
     ASSERT_EQ(r.width(),  w);
     ASSERT_EQ(r.height(), h);
@@ -87,34 +105,35 @@ TEST(Math, AARectIntersectionsSimple) {
 TEST(Math, AARectIntersectionsValid) {
     using namespace bklib;
 
-    using point = point2d<int>;
+    using rect  = axis_aligned_rect<int>;
+    using tl_point = rect::tl_point;
 
-    axis_aligned_rect<int> const ra = {point2d<int>{0, 0}, 5, 5};
+    rect const ra = {tl_point{0, 0}, 5, 5};
 
-    axis_aligned_rect<int> const rb[] = {
-        {point2d<int>{-1, -1}, 3, 3},
-        {point2d<int>{ 1, -1}, 3, 3},
-        {point2d<int>{ 3, -1}, 3, 3},
-        {point2d<int>{-1,  1}, 3, 3},
-        {point2d<int>{ 1,  1}, 3, 3},
-        {point2d<int>{ 3,  1}, 3, 3},
-        {point2d<int>{-1,  3}, 3, 3},
-        {point2d<int>{ 1,  3}, 3, 3},
-        {point2d<int>{ 3,  3}, 3, 3},
+    rect const rb[] = {
+        {tl_point{-1, -1}, 3, 3},
+        {tl_point{ 1, -1}, 3, 3},
+        {tl_point{ 3, -1}, 3, 3},
+        {tl_point{-1,  1}, 3, 3},
+        {tl_point{ 1,  1}, 3, 3},
+        {tl_point{ 3,  1}, 3, 3},
+        {tl_point{-1,  3}, 3, 3},
+        {tl_point{ 1,  3}, 3, 3},
+        {tl_point{ 3,  3}, 3, 3},
     };
 
     int const areas[] = {4, 6, 4, 6, 9, 6, 4, 6, 4};
 
-    axis_aligned_rect<int> const rc[] = {
-        {point{0, 0}, 2, 2},
-        {point{1, 0}, 3, 2},
-        {point{3, 0}, 2, 2},
-        {point{0, 1}, 2, 3},
-        {point{1, 1}, 3, 3},
-        {point{3, 1}, 2, 3},
-        {point{0, 3}, 2, 2},
-        {point{1, 3}, 3, 2},
-        {point{3, 3}, 2, 2},
+    rect const rc[] = {
+        {tl_point{0, 0}, 2, 2},
+        {tl_point{1, 0}, 3, 2},
+        {tl_point{3, 0}, 2, 2},
+        {tl_point{0, 1}, 2, 3},
+        {tl_point{1, 1}, 3, 3},
+        {tl_point{3, 1}, 2, 3},
+        {tl_point{0, 3}, 2, 2},
+        {tl_point{1, 3}, 3, 2},
+        {tl_point{3, 3}, 2, 2},
     };
 
     for (int i = 0; i < 9; ++i) {
@@ -133,10 +152,13 @@ TEST(Math, AARectIntersectionsValid) {
 TEST(Math, AARectIntersectionsInvalid) {
     using namespace bklib;
 
-    axis_aligned_rect<int> const r  = {point2d<int>{0, 0}, 10, 10};
-    axis_aligned_rect<int> const r1 = {10, 1,  11, 11};
-    axis_aligned_rect<int> const r2 = {1,  10, 11, 11};
-    axis_aligned_rect<int> const r3 = {10, 10, 11, 11};
+    using rect  = axis_aligned_rect<int>;
+    using tl_point = rect::tl_point;
+
+    auto const r  = rect{tl_point{0, 0}, 10, 10};
+    rect const r1 = {10, 1,  11, 11};
+    rect const r2 = {1,  10, 11, 11};
+    rect const r3 = {10, 10, 11, 11};
 
     ASSERT_FALSE(!!intersection_of(r, r1));
     ASSERT_FALSE(!!intersection_of(r, r2));

@@ -29,9 +29,7 @@ public:
         auto const w = static_cast<int>(width());
         auto const h = static_cast<int>(height());
 
-        point const p = {0, 0};
-
-        return {p, w, h};
+        return {rect::tl_point{0, 0}, w, h};
     }
 private:
 };
@@ -212,17 +210,24 @@ struct layout_random {
     }
 
     rect locate_relative_to(rect const origin, rect const r, random& rand) {
+        BK_ASSERT(r.left() == 0);
+        BK_ASSERT(r.top()  == 0);
+
         auto const c1 = bklib::bounding_circle(origin);
         auto const c2 = bklib::bounding_circle(r);
+        auto const v  = (c1.r + c2.r) * bklib::random_direction(rand);
 
-        auto const dir = (c1.r + c2.r) * bklib::random_direction(rand);
-        auto const v   = (c1.p - c2.p) + dir;
+        rect::center_point const p = bklib::round_toward<int>(c1.p + v, v);
 
-        return bklib::translate(r, bklib::to_type<int>(v));
+        return {p, r.width(), r.height()};
     }
 
     void insert(random& rand, room&& new_room) {
-        auto const new_rect = new_room.get_rect();
+        auto const new_rect   = new_room.get_rect();
+        auto const new_circle = bklib::bounding_circle(new_rect);
+
+        BK_ASSERT(new_rect.left() == 0);
+        BK_ASSERT(new_rect.top() == 0);
 
         if (rects_.empty()) {
             rects_.emplace_back(new_rect);
@@ -230,16 +235,19 @@ struct layout_random {
             return;
         }
 
-        auto const new_circle = bklib::bounding_circle(new_rect);
-
         auto const size  = rects_.size();
         auto const first =
             std::uniform_int_distribution<size_t>(0, size)(rand);
 
         for (unsigned n = 0; n < size; ++n) {
-            auto const i     = (first + n) % size;
+            auto const i = (first + n) % size;
+
+            auto const from_rect = rects_[i];
+            auto const from_circle = bklib::bounding_circle(from_rect);
+
+
             auto test_rect   = locate_relative_to(rects_[i], new_rect, rand);
-            auto test_circle = bklib::bounding_circle(test_rect);
+            auto test_circle = bklib::bounding_circle<float>(test_rect);
 
             auto const beg = std::begin(rects_);
             auto const end = std::end(rects_);
@@ -257,16 +265,16 @@ struct layout_random {
                 }
  
                 auto const ir = *where;
-                auto const ic = bklib::bounding_circle(ir);
+                auto const ic = bklib::bounding_circle<float>(ir);
 
                 auto const dir  = bklib::direction<float>(test_circle.p - ic.p);
                 auto const dist = -bklib::distance<float>(test_circle, ic);
-                auto const v = bklib::ceil<int>(dist * dir);
+                auto const v    = bklib::round_toward<int>(dist * dir);
 
                 BK_ASSERT(dist >= 0);
 
                 test_rect   = bklib::translate(test_rect, v);
-                test_circle = bklib::translate(test_circle, v);
+                test_circle = bklib::bounding_circle<float>(test_rect);
 
                 if (bklib::intersects(ir, test_rect)) {
                     auto result = bklib::intersection_of(ir, test_rect);
