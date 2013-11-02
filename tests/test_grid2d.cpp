@@ -108,6 +108,6 @@ TEST(Room, SimpleRoom) {
                 ASSERT_EQ((r[{x, y}].type), tez::tile_type::wall);
         }
 
-        //lay.insert(rand, std::move(r));
+        lay.insert(rand, std::move(r));
     }
 }

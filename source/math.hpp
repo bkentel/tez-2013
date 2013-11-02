@@ -234,7 +234,7 @@ public:
     }
 
     axis_aligned_rect(center_point p, value w, value h) BK_NOEXCEPT
-      : axis_aligned_rect(p.value - vector2d<T>{w / T{2}, h / T{2}}, w, h)
+      : axis_aligned_rect(p.value - [&]()->vector2d<T> { return {w / T{2}, h / T{2}}; }(), w, h)
     {
     }
 
@@ -426,11 +426,11 @@ auto operator+(point2d<T> const p, vector2d<U> const v) BK_NOEXCEPT
 template <typename T>
 auto operator+(axis_aligned_rect<T> const r, vector2d<T> const v) BK_NOEXCEPT
 -> axis_aligned_rect<T> {
-    auto const p = r.get_point(axis_aligned_rect<T>::top_left_t{});
+    auto const p = r.top_left();
     auto const w = r.width();
     auto const h = r.height();
 
-    return {p + v, w, h};
+    return {axis_aligned_rect<T>::tl_point(p + v), w, h};
 }
 //------------------------------------------------------------------------------
 template <typename T>
