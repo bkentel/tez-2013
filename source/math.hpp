@@ -519,6 +519,11 @@ auto direction(vector2d<T> const v) BK_NOEXCEPT
 -> vector2d<if_not_void_t<R, T>> {
     using result = if_not_void_t<R, T>;
     auto const mag = magnitude<result>(v);
+
+    if (is_equal(mag, result{0})) {
+        return {result{0}, result{0}};
+    }
+
     return v / mag;
 }
 //------------------------------------------------------------------------------

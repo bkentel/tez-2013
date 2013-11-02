@@ -178,9 +178,7 @@ struct layout_random {
             return intersection_iterator<rect>(std::begin(rects_), std::end(rects_), r);
         };
 
-        auto const iend = [&](rect const r) {
-            return intersection_iterator<rect>(std::end(rects_));
-        };
+        auto const iend = intersection_iterator<rect>(std::end(rects_));
 
         auto const w = new_room.width();
         auto const h = new_room.height();
@@ -203,37 +201,30 @@ struct layout_random {
 
             auto test_rect = rect(rect::center_point(bklib::round_toward<int>(center, v)), w, h);
             
-            for (auto count = 0; count < 10; ++count) {
+            for (auto count = 0; count < 2; ++count) {
                 static auto const zero = bklib::vector2d<float>{0.0f, 0.0f};
-
                 auto const test_circle = bklib::bounding_circle(test_rect);
-
                 auto const correction = std::accumulate(
-                    ibegin(test_rect), iend(test_rect), zero
-                  , [&](bklib::vector2d<float> v, rect ir) {
-                        BK_ASSERT(bklib::intersects(ir, test_rect));
-
-                        auto const ic = bklib::bounding_circle(ir);
+                    ibegin(test_rect), iend, zero
+                  , [&](bklib::vector2d<float> const& v, rect const& ir) {
+                        auto const ic  = bklib::bounding_circle(ir);
                         auto const dir = bklib::direction(test_circle.p - ic.p);
-
-                        std::cout << dir.x << " " << dir.y << std::endl;
-
                         auto const mag = -bklib::distance(test_circle, ic);
+
                         return v + dir * mag;
                     }
                 );
 
-                if (correction != zero) {
-                    test_rect = test_rect + bklib::round_toward<int>(correction);
-                    //std::cout << correction.x << " " << correction.y << std::endl;
-                } else {
+                if (correction == zero) {
                     insert_room(test_rect);
                     return;
                 }
+
+                test_rect = test_rect + bklib::round_toward<int>(correction);
             }
         }
 
-        return;
+        BK_DEBUG_BREAK();
     }
 
     distribution x_range_;
