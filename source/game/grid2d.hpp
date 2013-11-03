@@ -9,11 +9,37 @@
 #include "math.hpp"
 
 namespace tez {
+
+//==============================================================================
+template <typename T>
+struct index2d {
+    static_assert(std::is_integral<T>::value, "indicies must be integral.");
+
+    size_t as_size_t(size_t const stride, T dx = 0, T dy = 0) const BK_NOEXCEPT {
+        BK_ASSERT(y + dy >= 0);
+        BK_ASSERT(x + dx >= 0);
+
+        auto const yy = static_cast<size_t(y + dy);
+        auto const xx = static_cast<size_t(x + dx);
+
+        return yy * stride + xx;
+    }
+
+    T x, y;
+};
+//==============================================================================
+template <typename T> index2d<T> north_of(index2d<T> i) { return {i.x + 0, i.y - 1}; }
+template <typename T> index2d<T> south_of(index2d<T> i) { return {i.x + 0, i.y + 1}; }
+template <typename T> index2d<T> east_of(index2d<T> i)  { return {i.x + 1, i.y + 0}; }
+template <typename T> index2d<T> west_of(index2d<T> i)  { return {i.x - 1, i.y + 0}; }
+//==============================================================================
+
+
 namespace detail {
     //==========================================================================
     template <typename T>
     struct grid_iterator_value {
-        using index_t = bklib::index2d<size_t>;
+        using index_t = index2d<size_t>;
 
         grid_iterator_value operator=(grid_iterator_value const&) = delete;
 
@@ -212,7 +238,7 @@ template <typename T>
 class grid2d {
 public:
     using index_t = size_t;
-    using index   = bklib::index2d<index_t>;
+    using index   = index2d<index_t>;
 
     using reference       = T&;
     using const_reference = T const&;
