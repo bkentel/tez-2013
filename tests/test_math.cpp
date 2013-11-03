@@ -3,6 +3,45 @@
 #include <gtest/gtest.h>
 #include "math.hpp"
 
+#define BK_STATIC_ASSERT_TYPE_EQ(TYPE, VAR)\
+    static_assert(\
+        ::std::is_same<\
+            TYPE\
+          , ::std::remove_cv<decltype(VAR)>::type\
+        >::value\
+      , "Unexpected type."\
+    )
+
+TEST(Math, Vector) {
+    using namespace bklib;
+
+    vector2d<int> const ivec {3, -3};
+
+    auto const mag  = magnitude(ivec);
+    auto const dir  = direction(ivec);
+    auto const imag = magnitude<int>(dir);
+
+    BK_STATIC_ASSERT_TYPE_EQ(float, mag);
+    BK_STATIC_ASSERT_TYPE_EQ(float, dir.x);
+    BK_STATIC_ASSERT_TYPE_EQ(int, imag);
+
+    ASSERT_FLOAT_EQ(std::sqrt(18.0f), mag);   
+    ASSERT_FLOAT_EQ(1.0f  / std::sqrt(2.0f), dir.x);
+    ASSERT_FLOAT_EQ(-1.0f / std::sqrt(2.0f), dir.y);
+    ASSERT_EQ(1, imag);
+    ASSERT_FLOAT_EQ(1.0f, magnitude(dir));
+
+    ASSERT_EQ(
+        vector2d<float>({4.0f, -2.0f})
+      , ivec + vector2d<float>({1.0f, 1.0f})
+    );
+
+    ASSERT_EQ(
+        vector2d<int>({0, 0})
+      , ivec + -ivec
+    );
+}
+
 TEST(Math, Circle) {
     using namespace bklib;
     using point = point2d<int>;

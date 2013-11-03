@@ -357,6 +357,22 @@ intersection_result<point2d<T>> intersects(
 //==============================================================================
 // Global built-in operators.
 //==============================================================================
+template <typename T, typename U>
+auto make_point2d(T x, U y) -> point2d<common_type_t<T, U>> {
+    using type = common_type_t<T, U>;
+    return {static_cast<type>(x), static_cast<type>(y)};
+}
+
+template <typename T, typename U>
+auto make_vector2d(T x, U y) -> vector2d<common_type_t<T, U>> {
+    using type = common_type_t<T, U>;
+    return {static_cast<type>(x), static_cast<type>(y)};
+}
+
+
+//==============================================================================
+// Global built-in operators.
+//==============================================================================
 template <typename T>
 auto operator==(
     axis_aligned_rect<T> const lhs
@@ -494,9 +510,7 @@ auto operator+=(
     vector2d<T>&      lhs
   , vector2d<U> const rhs
 ) BK_NOEXCEPT -> vector2d<T>& {
-    lhs.x += rhs.x;
-    lhs.y += rhs.y;
-    return lhs;
+    return (lhs = lhs + rhs);
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
@@ -504,9 +518,15 @@ auto operator+=(
     point2d<T>&       lhs
   , vector2d<U> const rhs
 ) BK_NOEXCEPT -> point2d<T>& {
-    lhs.x += rhs.x;
-    lhs.y += rhs.y;
-    return lhs;
+    return (lhs = lhs + rhs);
+}
+
+template <typename T, typename U>
+auto operator+=(
+    axis_aligned_rect<T>& lhs
+  , vector2d<U> const     rhs
+) BK_NOEXCEPT -> axis_aligned_rect<T>& {
+    return (lhs = lhs + rhs);
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
@@ -514,9 +534,7 @@ auto operator-=(
     vector2d<T>&      lhs
   , vector2d<U> const rhs
 ) BK_NOEXCEPT -> vector2d<T>& {
-    lhs.x -= rhs.x;
-    lhs.y -= rhs.y;
-    return lhs;
+    return (lhs = lhs - rhs);
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
@@ -524,9 +542,7 @@ auto operator-=(
     point2d<T>&       lhs
   , vector2d<U> const rhs
 ) BK_NOEXCEPT -> point2d<T>& {
-    lhs.x -= rhs.x;
-    lhs.y -= rhs.y;
-    return lhs;
+    return (lhs = lhs - rhs);
 }
 //==============================================================================
 // Other operators.
@@ -890,6 +906,16 @@ point2d<R> round_toward(point2d<T> const p, vector2d<U> const v) {
 }
 
 //
+
+template <typename T, typename U>
+auto separation_vector(
+    bklib::circle<T> const a
+  , bklib::circle<U> const b
+) -> vector2d<common_type_t<T, U>> {
+    auto const dir = bklib::direction(a.p - b.p);
+    auto const mag = -bklib::distance(a, b);
+    return mag * dir;
+};
 
 //
 ////---------------

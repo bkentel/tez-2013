@@ -59,176 +59,109 @@ struct room_simple {
     distribution height_;
 };
 
-namespace detail {
+template <typename Container, typename Value, typename Test, typename Sum>
+Value accumulate_if(Container& c, Value init, Test test, Sum sum) {
+    auto it = std::cbegin(c);
+    auto end = std::cend(c);
+
+    Value value = init;
+
+    while (end != (it = std::find_if(it, end, test))) {
+        value = sum(value, *it++);
+    }
+
+    return value;
+}
 
 template <typename T>
-struct intersection_iterator_traits {
-    using base = typename std::vector<T>::iterator;
-    using value = T;
-    using traversal = boost::forward_traversal_tag;
-    using reference = T&;
-};
-
-} //namespace detail
-
-//==============================================================================
-template <typename T>
-class intersection_iterator : public boost::iterator_adaptor<
-    intersection_iterator<T>                                    // Derived
-  , typename detail::intersection_iterator_traits<T>::base      // Base
-  , typename detail::intersection_iterator_traits<T>::value     // Value
-  , typename detail::intersection_iterator_traits<T>::traversal // CategoryOrTraversal
-  , typename detail::intersection_iterator_traits<T>::reference // Reference
-> {
-public:
-    //intersection_iterator() BK_NOEXCEPT
-    //  : iterator_adaptor_ {}
-    //{
-    //}
-
-    intersection_iterator(base_type beg, base_type end, T comparison)
-      : iterator_adaptor_ {beg}
-      , comparison_{comparison}
-      , end_{end}
-    {
-        base_reference() = find_next_(base_reference());
-    }
-
-    explicit intersection_iterator(base_type end)
-      : iterator_adaptor_ {end}
-      , comparison_{}
-      , end_{end}
+struct min_max {
+    min_max(T const initial = T{0})
+      : min{initial}, max{initial}
     {
     }
-private:
-    friend class boost::iterator_core_access;
 
-    base_type find_next_(base_type where) const {
-        return std::find_if(where, end_, [&](value_type const& x) {
-            return bklib::intersects(x, comparison_);
-        });
+    void operator()(T const n) {
+        if (n < min) min = n;
+        else if (n > max) max = n;
     }
 
-    T& dereference() const {
-        return *base_reference();
-    }
-
-    void advance(typename super_t::difference_type n) {
-        while (base_reference() != end_ && n--) increment();
-    }
-
-    void increment() {
-        base_reference() = find_next_(base_reference() + 1);
-    }
-
-    T         comparison_;
-    base_type end_;
+    T min, max;
 };
-
 
 struct layout_random {
     using distribution = std::uniform_int_distribution<int>;
     using rect = bklib::axis_aligned_rect<int>;
 
+    min_max<int> range_x_;
+    min_max<int> range_y_;
+
     layout_random()
-      : x_range_{-10, 10}
-      , y_range_{-10, 10}
     {
     }
 
-    void adjust_ranges(rect const r) {
-        auto const min_x = std::min(r.left(), x_range_.min());
-        auto const max_x = std::max(r.right(), x_range_.max());
-
-        auto const min_y = std::min(r.top(), y_range_.min());
-        auto const max_y = std::max(r.bottom(), y_range_.max());
-
-        x_range_.param({min_x, max_x});
-        y_range_.param({min_y, max_y});
-    }
-
     struct looped_index {
+        using dist = std::uniform_int_distribution<size_t>;
+
         looped_index(random& rand, size_t const size)
-          : cur{std::uniform_int_distribution<size_t>(0, size - 1)(rand)}
-          , size{size - 1}
-          , count{0}
+          : cur{dist(0, size ? size - 1 : 0)(rand)}
+          , size{size ? size : 1}
         {
-            BK_ASSERT(size > 0);
         }
 
-        size_t operator++() {
-            count++;
-            return (cur = (cur + 1) % size);
-        }
-
+        size_t operator++() { return ++cur % size; }
         operator size_t() const { return cur; }
 
-        size_t cur;
-        size_t size;
-        size_t count;
+        size_t cur, size;
     };
 
+    void update_ranges(rect const& r) {
+        range_x_(r.left());
+        range_x_(r.right());
+        range_y_(r.top());
+        range_y_(r.bottom());
+    }
+
     void insert(random& rand, room&& new_room) {
-        auto const insert_room = [&](rect r) {
-            rects_.emplace_back(r);
-            data_.emplace_back(std::move(new_room));
-        };
-
-        auto const ibegin = [&](rect const r) {
-            return intersection_iterator<rect>(std::begin(rects_), std::end(rects_), r);
-        };
-
-        auto const iend = intersection_iterator<rect>(std::end(rects_));
+        using namespace bklib;
+        static auto const zero = make_vector2d(0.0f, 0.0f);
 
         auto const w = new_room.width();
         auto const h = new_room.height();
-        auto const r = bklib::magnitude(bklib::vector2d<float>{{w / 2.0f, h / 2.0f}});
+        auto const r = magnitude(make_vector2d(w/2.0f, h/2.0f));
 
-        auto const max_iter = rects_.size() * 2;
+        auto test_rect = rect(rect::tl_point{0, 0}, w, h);
+        bool inserted  = rects_.empty();
 
-        if (rects_.empty()) {
-            insert_room(rect(rect::tl_point{0, 0}, w, h));
-            return;
-        }
-
-        auto index = looped_index {rand, rects_.size()};
-        for (auto i = index; index.count < max_iter; ++i) {
-            auto const cur_rect   = rects_[i];
-            auto const cur_circle = bklib::bounding_circle(cur_rect);
-            
-            auto const v = bklib::random_direction(rand) * (r + cur_circle.r);
-            auto const center = cur_circle.p + v;
-
-            auto test_rect = rect(rect::center_point(bklib::round_toward<int>(center, v)), w, h);
-            
-            for (auto count = 0; count < 2; ++count) {
-                static auto const zero = bklib::vector2d<float>{0.0f, 0.0f};
-                auto const test_circle = bklib::bounding_circle(test_rect);
-                auto const correction = std::accumulate(
-                    ibegin(test_rect), iend, zero
-                  , [&](bklib::vector2d<float> const& v, rect const& ir) {
-                        auto const ic  = bklib::bounding_circle(ir);
-                        auto const dir = bklib::direction(test_circle.p - ic.p);
-                        auto const mag = -bklib::distance(test_circle, ic);
-
-                        return v + dir * mag;
-                    }
-                );
-
-                if (correction == zero) {
-                    insert_room(test_rect);
-                    return;
+        auto get_correction = [&](rect const& test_rect) {
+            auto const c = bounding_circle(test_rect);
+            return accumulate_if(rects_, zero
+                , [&](rect const& r) { return intersects(r, test_rect); }
+                , [&](vector2d<float> const& v, rect const& ir) {
+                    return v + separation_vector(c, bounding_circle(ir));
                 }
+            );
+        };
 
-                test_rect = test_rect + bklib::round_toward<int>(correction);
+        for (auto i = looped_index {rand, rects_.size()}; !inserted; ++i) {
+            auto const cur_rect   = rects_[i];
+            auto const cur_circle = bounding_circle(cur_rect);
+            
+            for (auto count = 0; !inserted && count < 10; ++count) {
+                auto const v = random_direction(rand) * (r + cur_circle.r);
+                auto const p = round_toward<int>(cur_circle.p + v, v);
+
+                test_rect = rect(rect::center_point(p), w, h);
+
+                auto correction = get_correction(test_rect);
+                inserted = (zero == correction) || (zero == get_correction(
+                    test_rect += round_toward<int>(correction)
+                ));
             }
         }
 
-        BK_DEBUG_BREAK();
+        rects_.emplace_back(test_rect);
+        data_.emplace_back(std::move(new_room));
     }
-
-    distribution x_range_;
-    distribution y_range_;
 
     std::vector<rect> rects_;
     std::vector<room> data_;
