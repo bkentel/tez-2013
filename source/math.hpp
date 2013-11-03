@@ -281,13 +281,6 @@ public:
     bool is_well_formed() const BK_NOEXCEPT {
         return (left() < right()) && (top() < bottom());
     }
-
-    axis_aligned_rect& translate(vector const v) {
-        x0_ += v.x; x1_ += v.x;
-        y0_ += v.y; y1_ += v.y;
-
-        return *this;
-    }
 private:
     //--------------------------------------------------------------------------
     //! Point plus dimensions construction.
@@ -539,37 +532,58 @@ auto operator-=(
 // Other operators.
 //==============================================================================
 template <typename R = void, typename T = void, typename U = void>
-auto dot(vector2d<T> const u, vector2d<U> const v) BK_NOEXCEPT
--> if_not_void_common_t<R, T, U> {
-    return if_not_void_common_t<R, T, U> {u.x * v.x + u.y * v.y};
+auto dot(
+    vector2d<T> const u
+  , vector2d<U> const v
+) BK_NOEXCEPT -> if_not_void_common_t<R, T, U> {
+    using type = if_not_void_common_t<R, T, U>;
+    return static_cast<type>(u.x * v.x + u.y * v.y);
 }
 //------------------------------------------------------------------------------
 template <typename R = void, typename T = void>
-auto dot(vector2d<T> const v) BK_NOEXCEPT
--> if_not_void_t<R, T> {
+auto dot(
+    vector2d<T> const v
+) BK_NOEXCEPT -> if_not_void_t<R, T> {
     using type = if_not_void_t<R, T>;
     return static_cast<type>(dot(v, v));
 }
 //------------------------------------------------------------------------------
-template <typename R = void, typename T = void>
-auto magnitude(vector2d<T> const v) BK_NOEXCEPT
--> if_not_void_t<R, T> {
-    using result = if_not_void_t<R, T>;
-    auto const mag2 = static_cast<result>(dot(v, v));
-    return static_cast<result>(std::sqrt(mag2));
+
+//==============================================================================
+//! If T is a floating point type, then T, otherwise Default.
+//==============================================================================
+template <typename T, typename Default = float>
+using floating_point_t = std::conditional_t<
+    std::is_floating_point<T>::value
+  , T
+  , Default
+>;
+
+//==============================================================================
+//! @returns The scalar magnitude of the vector @c v as @c R or a floating
+//!          point type.
+//! @tparam R The result type if not @c void.
+//==============================================================================
+template <typename R = void, typename T>
+auto magnitude(
+    vector2d<T> const v
+) BK_NOEXCEPT -> if_not_void_t<R, floating_point_t<T>> {
+    using type = if_not_void_t<R, floating_point_t<T>>;
+    return static_cast<type>(std::sqrt(dot(v)));
 }
-//------------------------------------------------------------------------------
-template <typename R = void, typename T = void>
-auto direction(vector2d<T> const v) BK_NOEXCEPT
--> vector2d<if_not_void_t<R, T>> {
-    using result = if_not_void_t<R, T>;
-    auto const mag = magnitude<result>(v);
+//==============================================================================
+//! @returns A unit vector in the direction of v.
+//! @tparam R The element type if not @c void.
+//==============================================================================
+template <typename R = void, typename T>
+auto direction(
+    vector2d<T> const v
+) BK_NOEXCEPT -> vector2d<if_not_void_t<R, floating_point_t<T>>> {
+    using type = if_not_void_t<R, floating_point_t<T>>;
+    auto const mag = magnitude<type>(v);
 
-    if (is_equal(mag, result{0})) {
-        return {result{0}, result{0}};
-    }
-
-    return v / mag;
+    if (is_equal(mag, type{0})) return to_type<type>(v);
+    else                        return v / mag;
 }
 //------------------------------------------------------------------------------
 template <typename T>
@@ -838,36 +852,41 @@ auto translate(circle<T> const c, vector2d<T> const v) BK_NOEXCEPT
     return {c.p + v, c.r};
 }
 
-template <typename R, typename T, enable_for_floating_point_t<T>* = 0>
-point2d<R> ceil(point2d<T> const p) {
-    return {static_cast<R>(std::ceil(p.x)), static_cast<R>(std::ceil(p.y))};
+//==============================================================================
+//! Rounds @c n to the next most negative / positive integer value.
+//==============================================================================
+template <typename T
+  , enable_for_floating_point_t<T>* = 0 //floating point types.
+>
+T round_toward(T const n) {
+    return n >= T{0} ? std::ceil(n) : std::floor(n);
 }
-
-template <typename R, typename T, enable_for_integral_t<T>* = 0>
-point2d<R> ceil(point2d<T> const p) {
-    return p;
+//------------------------------------------------------------------------------
+template <typename T
+  , enable_for_integral_t<T>* = 0 //integral types.
+>
+T round_toward(T const n) {
+    return n;
 }
-
+//==============================================================================
+//! Rounds the vector @c v in its direction.
+//==============================================================================
 template <typename R, typename T>
 vector2d<R> round_toward(vector2d<T> const v) {
-    static_assert(std::is_integral<R>::value, "must be integral");
-    static_assert(std::is_floating_point<T>::value, "must be floating");
+    auto const x = static_cast<R>(round_toward(v.x));
+    auto const y = static_cast<R>(round_toward(v.y));
 
-    auto const x = v.x >= T{0} ? std::ceil(v.x) : std::floor(v.x);
-    auto const y = v.y >= T{0} ? std::ceil(v.y) : std::floor(v.y);
-
-    return {static_cast<R>(x), static_cast<R>(y)};
+    return {x, y};
 }
-
+//==============================================================================
+//! Rounds the point @c p in the direction of @c v.
+//==============================================================================
 template <typename R, typename T, typename U>
 point2d<R> round_toward(point2d<T> const p, vector2d<U> const v) {
-    static_assert(std::is_integral<R>::value, "must be integral");
-    static_assert(std::is_floating_point<T>::value, "must be floating");
+    auto const x = static_cast<R>(round_toward(p.x + v.x));
+    auto const y = static_cast<R>(round_toward(p.y + v.y));
 
-    auto const x = v.x >= T{0} ? std::ceil(p.x) : std::floor(p.x);
-    auto const y = v.y >= T{0} ? std::ceil(p.y) : std::floor(p.y);
-
-    return {static_cast<R>(x), static_cast<R>(y)};
+    return {x, y};
 }
 
 //
