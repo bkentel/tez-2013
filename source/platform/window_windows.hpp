@@ -44,6 +44,7 @@ public:
     platform_window::platform_handle get_handle() const;
 
     void listen(on_create callback);
+    void listen(on_paint  callback);
     void listen(on_close  callback);
     void listen(on_resize callback);
 
@@ -59,8 +60,12 @@ private:
     window_handle window_;
 
     on_create on_create_;
+    on_paint  on_paint_;
     on_close  on_close_;
     on_resize on_resize_;
+
+    mouse::on_move_to on_mouse_move_to_;
+    mouse::on_move    on_mouse_move_;
 
     LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:

@@ -37,6 +37,9 @@ pw::platform_handle pw::get_handle() const {
 void pw::listen(on_create callback) {
     impl_->listen(callback);
 }
+void pw::listen(on_paint callback) {
+    impl_->listen(callback);
+}
 void pw::listen(on_close  callback) {
     impl_->listen(callback);
 }

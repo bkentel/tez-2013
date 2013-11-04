@@ -96,6 +96,29 @@ namespace {
             options->Set(COMGLB_EXCEPTION_HANDLING, COMGLB_EXCEPTION_DONOT_HANDLE_ANY)
         );
     }
+
+    template <typename T, size_t N>
+    size_t elements_in(T const (&)[N]) {
+        return N;
+    }
+
+    void init_raw_input() {
+        static RAWINPUTDEVICE const devices[] = {
+            {0x01, 0x02, 0, 0} //mouse
+          , {0x01, 0x06, 0, 0} //keyboard
+        };
+
+        auto const result = ::RegisterRawInputDevices(
+            devices
+          , elements_in(devices)
+          , sizeof(RAWINPUTDEVICE)
+        );
+
+        if (result == FALSE) {
+            BK_DEBUG_BREAK(); //TODO
+        }
+    }
+
 } //namespace
 
 void window::init_() {
@@ -103,6 +126,7 @@ void window::init_() {
         ::HeapSetInformation(nullptr, HeapEnableTerminationOnCorruption, nullptr, 0);
 
         init_com();
+        init_raw_input();
 
         auto const result = ::ImmDisableIME(static_cast<DWORD>(-1));
         if (result == FALSE) {
@@ -249,9 +273,90 @@ try {
     return 0;
 }
 //------------------------------------------------------------------------------
-LRESULT window::local_wnd_proc_(UINT const uMsg, WPARAM const wParam, LPARAM const lParam) {
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+struct raw_input {
+    explicit raw_input(LPARAM lParam) {
+        auto handle = reinterpret_cast<HRAWINPUT>(lParam);
+
+        UINT size {0};
+        auto result = ::GetRawInputData(
+            handle
+          , RID_INPUT
+          , 0
+          , &size
+          , sizeof(RAWINPUTHEADER)
+        );
+
+        if (result != 0) {
+            BK_DEBUG_BREAK(); //TODO
+        }
+
+        buffer_ = std::make_unique<char[]>(size);
+
+        result = ::GetRawInputData(
+            handle
+          , RID_INPUT
+          , buffer_.get()
+          , &size
+          , sizeof(RAWINPUTHEADER)
+        );
+
+        if (result != size) {
+            BK_DEBUG_BREAK(); //TODO
+        }
+    }
+
+    RAWINPUT const* operator->() const {
+        return reinterpret_cast<RAWINPUT*>(buffer_.get());
+    }
+
+    bool is_mouse() const { return (*this)->header.dwType == RIM_TYPEMOUSE; }
+    
+    RAWMOUSE const& mouse() const {
+        BK_ASSERT(is_mouse());
+        return (*this)->data.mouse;
+    }
+
+    void handle() {
+        auto i = reinterpret_cast<RAWINPUT*>(buffer_.get());
+        auto const result = ::DefRawInputProc(&i, 1, sizeof(RAWINPUTHEADER));
+        if (result != S_OK) {
+            BK_DEBUG_BREAK(); //TODO
+        }
+    }
+
+    std::unique_ptr<char[]> buffer_;
+};
+
+//------------------------------------------------------------------------------
+LRESULT window::local_wnd_proc_(
+    UINT   const uMsg
+  , WPARAM const wParam
+  , LPARAM const lParam
+) {
     switch (uMsg) {
+    case WM_INPUT : {
+        auto input = raw_input{lParam};
+        if (input.is_mouse()) {
+            auto& mouse = input.mouse();
+            auto const x = mouse.lLastX;
+            auto const y = mouse.lLastY;
+
+            push_event_([=] {
+                if (on_mouse_move_) on_mouse_move_(x, y);
+            });
+
+            return 0;
+        } else {
+            input.handle();
+        }
+    } break;
     case WM_PAINT :
+        push_event_([=] {
+            if (on_paint_) on_paint_();
+        });
         break;
     case WM_ERASEBKGND :
         return 0;
@@ -263,16 +368,18 @@ LRESULT window::local_wnd_proc_(UINT const uMsg, WPARAM const wParam, LPARAM con
             auto const x = static_cast<int>(lParam & 0xFFFF);
             auto const y = static_cast<int>(lParam >> 16);
 
-            //if (pw_.on_mouse_move_to_) pw_.on_mouse_move_to_(x, y);
-            //event_mouse_move(x, y);
+            if (on_mouse_move_to_) on_mouse_move_to_(x, y);
         });
         break;
     case WM_SIZE:
         push_event_([=] {
-            RECT r;
+            RECT r {};
             ::GetClientRect(handle(), &r);
-
-            //event_size(r.right - r.left, r.bottom - r.top);
+            
+            if (on_resize_) on_resize_(
+                r.right  - r.left
+              , r.bottom - r.top
+            );
         });
         break;
     default :
@@ -309,14 +416,19 @@ void window::shutdown() {
     });
 }
 
-void window::listen(bklib::platform_window::on_create callback) {}
-void window::listen(bklib::platform_window::on_close  callback) {}
-void window::listen(bklib::platform_window::on_resize callback) {}
+using pw = bklib::platform_window;
 
-void window::listen(bklib::mouse::on_enter   callback) {}
-void window::listen(bklib::mouse::on_exit    callback) {}
-void window::listen(bklib::mouse::on_move    callback) {}
-void window::listen(bklib::mouse::on_move_to callback) {}
+void window::listen(pw::on_create callback) { on_create_ = callback; }
+void window::listen(pw::on_paint  callback) { on_paint_  = callback; }
+void window::listen(pw::on_close  callback) { on_close_  = callback; }
+void window::listen(pw::on_resize callback) { on_resize_ = callback; }
+
+using mouse = bklib::mouse;
+
+void window::listen(mouse::on_enter   callback) {}
+void window::listen(mouse::on_exit    callback) {}
+void window::listen(mouse::on_move    callback) { on_mouse_move_ = callback; }
+void window::listen(mouse::on_move_to callback) { on_mouse_move_to_ = callback; }
 
 void window::listen(bklib::ime_candidate_list::on_begin  callback) {}
 void window::listen(bklib::ime_candidate_list::on_update callback) {}

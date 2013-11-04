@@ -19,6 +19,8 @@ public:
 
 class platform_window {
 public:
+    struct platform_handle;
+
     class impl_t_;
     friend impl_t_;
 
@@ -30,10 +32,12 @@ public:
     explicit platform_window(platform_string title);
 
     BK_DECLARE_EVENT(on_create, void());
+    BK_DECLARE_EVENT(on_paint,  void());
     BK_DECLARE_EVENT(on_close,  void());
-    BK_DECLARE_EVENT(on_resize, void(unsigned w, unsigned h));;
+    BK_DECLARE_EVENT(on_resize, void(unsigned w, unsigned h));
 
     void listen(on_create callback);
+    void listen(on_paint  callback);
     void listen(on_close  callback);
     void listen(on_resize callback);
 
@@ -51,8 +55,6 @@ public:
     std::future<int> result_value();
 
     void do_events();
-
-    struct platform_handle;
 
     platform_handle get_handle() const;
 private:

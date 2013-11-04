@@ -186,11 +186,17 @@ struct layout_random {
         using namespace bklib;
         static auto const zero = make_vector2d(0.0f, 0.0f);
 
-        auto const w = new_room.width();
-        auto const h = new_room.height();
+        auto const w = static_cast<int>(new_room.width());
+        auto const h = static_cast<int>(new_room.height());
         auto const r = magnitude(make_vector2d(w/2.0f, h/2.0f));
 
-        auto test_rect = rect(rect::tl_point{0, 0}, w, h);
+        auto test_rect = rect{
+            -MIN_SEPARATION
+          , -MIN_SEPARATION
+          , w + MIN_SEPARATION
+          , h + MIN_SEPARATION
+        };
+
         bool inserted  = rects_.empty();
 
         //calculate a displacement vector that is the sum of the vectors between
@@ -213,10 +219,10 @@ struct layout_random {
             //try to place the new room at a location randomly rotated around
             //cur_rect.
             for (auto n = 0; !inserted && n < MAX_ITERATIONS; ++n) {
-                auto const v = random_direction(rand) * (r + cur_circle.r + MIN_SEPARATION);
+                auto const v = random_direction(rand) * (r + cur_circle.r);
                 auto const p = round_toward<int>(cur_circle.p + v, v);
 
-                test_rect =  rect(rect::center_point(p), w, h);
+                test_rect =  rect(rect::center_point(p), w + 2*MIN_SEPARATION, h + 2*MIN_SEPARATION);
 
                 auto const correction = get_correction(test_rect);
                 inserted = (correction.first == 0);
@@ -227,6 +233,13 @@ struct layout_random {
                 }
             }
         }
+
+        test_rect = rect{
+            test_rect.left()   + MIN_SEPARATION
+          , test_rect.top()    + MIN_SEPARATION
+          , test_rect.right()  - MIN_SEPARATION
+          , test_rect.bottom() - MIN_SEPARATION
+        };
 
         update_ranges(test_rect);
         rects_.emplace_back(test_rect);

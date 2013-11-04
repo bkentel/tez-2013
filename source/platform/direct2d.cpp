@@ -55,7 +55,7 @@ namespace {
     create_brush(ID2D1HwndRenderTarget& target) {
         ID2D1SolidColorBrush* brush = nullptr;
         HRESULT const hr = target.CreateSolidColorBrush(
-            D2D1::ColorF(1.0f, 0.0f, 0.0f),
+            D2D1::ColorF(1.0f, 1.0f, 1.0f),
             &brush
         );
 
@@ -66,8 +66,9 @@ namespace {
 }
 
 d2d_renderer::d2d_renderer(HWND window)
-    : factory_(create_factory())
-    , target_(create_renderer(*factory_, window))
-    , brush_(create_brush(*target_))
+  : x_off_{0}, y_off_{0}
+  , factory_(create_factory())
+  , target_(create_renderer(*factory_, window))
+  , brush_(create_brush(*target_))
 {
 }

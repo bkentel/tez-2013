@@ -562,16 +562,54 @@ try {
     bklib::platform_window win {L"Tez"};
     bklib::win::d2d_renderer renderer {win.get_handle()};
 
-    auto on_mouse_move = [&](int x, int y) {
-        std::cout << x << ", " << y << std::endl;
-    };
+    auto room_gen = tez::generator::room_simple({2, 10}, {2, 10});
+    tez::generator::layout_random layout;
 
-    win.listen(
-        bklib::mouse::on_move_to {on_mouse_move}
-    );
+    //--------------------------------------------------------------------------
+    using clock = std::chrono::high_resolution_clock;
+    auto last_time = clock::now();
+    //--------------------------------------------------------------------------
+    auto const render = [&] {
+        renderer.begin();
+        renderer.clear();
+
+        for (auto const& r : layout.rects_) {
+            renderer.draw_filled_rect(r);
+        }
+
+        renderer.end();
+    };
+    //--------------------------------------------------------------------------
+    auto const on_paint = [&]() {
+    };
+    //--------------------------------------------------------------------------
+    auto const on_resize = [&](unsigned w, unsigned h) {
+        renderer.resize(w, h);
+    };
+    //--------------------------------------------------------------------------
+    auto const on_mouse_move = [&](signed dx, signed dy) {
+        renderer.traslate(dx, dy);
+    };
+    //--------------------------------------------------------------------------
+
+    win.listen(bklib::platform_window::on_paint{on_paint});
+    win.listen(bklib::platform_window::on_resize{on_resize});
+    win.listen(bklib::mouse::on_move{on_mouse_move});
+
+    for (auto i = 0; i < 100; ++i) {
+        layout.insert(rand, room_gen.generate(rand));
+    }
+    layout.normalize();    
 
     while (win.is_running()) {
         win.do_events();
+
+        auto cur_time = clock::now();
+        auto const dt = cur_time - last_time;
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(dt).count() > 1000 / 60) {
+            last_time = cur_time;
+            render();
+        }
     }
 
     auto result = win.result_value().get();
