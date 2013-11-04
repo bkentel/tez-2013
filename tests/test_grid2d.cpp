@@ -89,6 +89,8 @@ TEST(Room, SimpleRoom) {
     auto const min_h = 3u; auto const max_h = 7u;
     generator::room_simple gen{{min_w, max_w}, {min_h, max_h}};
 
+    for (int count = 0; count < 100; ++count) {
+
     tez::generator::layout_random lay;
 
     for (int i = 0; i < 100; ++i) {
@@ -114,4 +116,6 @@ TEST(Room, SimpleRoom) {
     ASSERT_TRUE(lay.verify());
     lay.normalize();
     ASSERT_TRUE(lay.verify());
+
+    }
 }

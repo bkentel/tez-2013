@@ -12,17 +12,21 @@ namespace bklib {
 //! @tparam Sum Binary function(Value, Container::value_type)
 //==============================================================================
 template <typename Container, typename Value, typename Test, typename Sum>
-Value accumulate_if(Container const& c, Value init, Test test, Sum sum) {
+auto accumulate_if(Container const& c, Value init, Test test, Sum sum)
+-> std::pair<size_t, Value>
+{
     auto it  = std::cbegin(c);
     auto end = std::cend(c);
 
-    Value value = init;
+    Value  value = init;
+    size_t count = 0;
 
     while (end != (it = std::find_if(it, end, test))) {
         value = sum(value, *it++);
+        ++count;
     }
 
-    return value;
+    return {count, value};
 }
 
 } //namespace bklib

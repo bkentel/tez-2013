@@ -129,8 +129,8 @@ struct layout_random {
         {
         }
 
-        size_t operator++() { return ++cur % size; }
-        operator size_t() const { return cur; }
+        size_t operator++() { return (++cur % size); }
+        operator size_t() const { return (cur % size); }
 
         size_t cur, size;
     };
@@ -157,7 +157,7 @@ struct layout_random {
     }
 
     bool verify() const {
-        for (auto i = 0; i < rects_.size(); ++i) {
+        for (auto i = 0u; i < rects_.size(); ++i) {
             for (auto j = i + 1; j < rects_.size(); ++j) {
                 auto const& a = rects_[i];
                 auto const& b = rects_[j];
@@ -170,15 +170,17 @@ struct layout_random {
         return true;
     }
 
-    bool intersects(rect r) const {
+    bool intersects(rect const r) const {
         return std::cend(rects_) != std::find_if(
-            std::cbegin(rects_)
-          , std::cend(rects_)
-          , [r](rect ir) {
+            std::cbegin(rects_), std::cend(rects_)
+          , [r](rect const ir) {
                 return bklib::intersects(r, ir);
             }
         );
     }
+
+    static int const MAX_ITERATIONS = 10;
+    static int const MIN_SEPARATION = 1;
 
     void insert(random& rand, room&& new_room) {
         using namespace bklib;
@@ -191,6 +193,8 @@ struct layout_random {
         auto test_rect = rect(rect::tl_point{0, 0}, w, h);
         bool inserted  = rects_.empty();
 
+        //calculate a displacement vector that is the sum of the vectors between
+        //the centers of the existing rects which intersect test_rect.
         auto get_correction = [&](rect const& test_rect) {
             auto const c = bounding_circle(test_rect);
             return accumulate_if(rects_, zero
@@ -201,23 +205,26 @@ struct layout_random {
             );
         };
 
+        //loop through existing rects with a random starting index.
         for (auto i = looped_index {rand, rects_.size()}; !inserted; ++i) {
             auto const cur_rect   = rects_[i];
             auto const cur_circle = bounding_circle(cur_rect);
             
-            for (auto count = 0; !inserted && count < 10; ++count) {
-                auto const v = random_direction(rand) * (r + cur_circle.r);
+            //try to place the new room at a location randomly rotated around
+            //cur_rect.
+            for (auto n = 0; !inserted && n < MAX_ITERATIONS; ++n) {
+                auto const v = random_direction(rand) * (r + cur_circle.r + MIN_SEPARATION);
                 auto const p = round_toward<int>(cur_circle.p + v, v);
 
-                test_rect = rect(rect::center_point(p), w, h);
+                test_rect =  rect(rect::center_point(p), w, h);
 
-                auto correction = get_correction(test_rect);
+                auto const correction = get_correction(test_rect);
+                inserted = (correction.first == 0);
 
-                
-
-                inserted = (zero == correction) || (zero == get_correction(
-                    test_rect += round_toward<int>(correction)
-                ));
+                if (!inserted) {
+                    test_rect += round_toward<int>(correction.second);
+                    inserted  =  !intersects(test_rect);
+                }
             }
         }
 
