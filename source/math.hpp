@@ -1,10 +1,31 @@
 //==============================================================================
+//! Mathematical functions and objects.
 //! @file
 //! @author Brandon Kentel
 //==============================================================================
 #pragma once
 
 namespace bklib {
+
+//==============================================================================
+//! Tracked simultaneous min/max value.
+//==============================================================================
+template <typename T>
+struct min_max {
+    explicit min_max(T const initial = T{0})
+      : min{initial}, max{initial}
+    {
+    }
+
+    void operator()(T const n) BK_NOEXCEPT {
+        if (n < min) min = n;
+        else if (n > max) max = n;
+    }
+
+    T range() const BK_NOEXCEPT { return max - min; }
+
+    T min, max;
+};
 
 //==============================================================================
 //! Convenience type for std::common_type<T, U>.
@@ -160,6 +181,10 @@ namespace detail {
         struct tagged_point {
             tagged_point(T x, T y) : value{{x, y}} {}
             tagged_point(point2d<T> p) : value{{p.x, p.y}} {}
+
+            operator point2d<T>&() { return value; }
+            operator point2d<T> const&() const { return value; }
+
             point2d<T> value;
         };
 
@@ -472,13 +497,8 @@ auto operator+(
     axis_aligned_rect<T> const r
   , vector2d<U>          const v
 ) BK_NOEXCEPT -> axis_aligned_rect<common_type_t<T, U>> {
-    using common = common_type_t<T, U>;
-
-    auto   const p = r.top_left();
-    common const w = r.width();
-    common const h = r.height();
-
-    return {axis_aligned_rect<common>::tl_point(p + v), w, h};
+    axis_aligned_rect<common_type_t<T, U>>::tl_point const p = r.top_left() + v;
+    return {p, r.width(), r.height()};
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
@@ -506,44 +526,69 @@ auto operator-(
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator+=(
-    vector2d<T>&      lhs
-  , vector2d<U> const rhs
-) BK_NOEXCEPT -> vector2d<T>& {
-    return (lhs = lhs + rhs);
+auto operator-(
+    axis_aligned_rect<T> const r
+  , vector2d<U>          const v
+) BK_NOEXCEPT -> axis_aligned_rect<common_type_t<T, U>> {
+    axis_aligned_rect<common_type_t<T, U>>::tl_point const p = r.top_left() - v;
+    return {p, r.width(), r.height()};
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
 auto operator+=(
-    point2d<T>&       lhs
+    T&                lhs
   , vector2d<U> const rhs
-) BK_NOEXCEPT -> point2d<T>& {
+) BK_NOEXCEPT -> T& {
     return (lhs = lhs + rhs);
 }
 
 template <typename T, typename U>
-auto operator+=(
-    axis_aligned_rect<T>& lhs
-  , vector2d<U> const     rhs
-) BK_NOEXCEPT -> axis_aligned_rect<T>& {
-    return (lhs = lhs + rhs);
-}
-//------------------------------------------------------------------------------
-template <typename T, typename U>
 auto operator-=(
-    vector2d<T>&      lhs
+    T&                lhs
   , vector2d<U> const rhs
-) BK_NOEXCEPT -> vector2d<T>& {
+) BK_NOEXCEPT -> T& {
     return (lhs = lhs - rhs);
 }
-//------------------------------------------------------------------------------
-template <typename T, typename U>
-auto operator-=(
-    point2d<T>&       lhs
-  , vector2d<U> const rhs
-) BK_NOEXCEPT -> point2d<T>& {
-    return (lhs = lhs - rhs);
-}
+
+//template <typename T, typename U>
+//auto operator+=(
+//    vector2d<T>&      lhs
+//  , vector2d<U> const rhs
+//) BK_NOEXCEPT -> vector2d<T>& {
+//    return (lhs = lhs + rhs);
+//}
+////------------------------------------------------------------------------------
+//template <typename T, typename U>
+//auto operator+=(
+//    point2d<T>&       lhs
+//  , vector2d<U> const rhs
+//) BK_NOEXCEPT -> point2d<T>& {
+//    return (lhs = lhs + rhs);
+//}
+///------------------------------------------------------------------------------
+//template <typename T, typename U>
+//auto operator+=(
+//    axis_aligned_rect<T>& lhs
+//  , vector2d<U> const     rhs
+//) BK_NOEXCEPT -> axis_aligned_rect<T>& {
+//    return (lhs = lhs + rhs);
+//}
+////------------------------------------------------------------------------------
+//template <typename T, typename U>
+//auto operator-=(
+//    vector2d<T>&      lhs
+//  , vector2d<U> const rhs
+//) BK_NOEXCEPT -> vector2d<T>& {
+//    return (lhs = lhs - rhs);
+//}
+////------------------------------------------------------------------------------
+//template <typename T, typename U>
+//auto operator-=(
+//    point2d<T>&       lhs
+//  , vector2d<U> const rhs
+//) BK_NOEXCEPT -> point2d<T>& {
+//    return (lhs = lhs - rhs);
+//}
 //==============================================================================
 // Other operators.
 //==============================================================================

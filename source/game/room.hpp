@@ -2,6 +2,10 @@
 
 #include "config.hpp"
 #include "assert.hpp"
+
+#include "math.hpp"
+#include "algorithms.hpp"
+
 #include "tile_data.hpp"
 #include "grid2d.hpp"
 
@@ -10,31 +14,62 @@ namespace tez {
 using random = std::mt19937;
 
 //==============================================================================
+//! A single room.
+//==============================================================================
 class room : public grid2d<tile_data> {
 public:
     using rect  = bklib::axis_aligned_rect<int>;
     using point = bklib::point2d<int>;
 
+    //No implicit copies
     room(room const&) = delete;
     room& operator=(room const&) = delete;
 
+    //Move operators
     room(room&& other);
     room& operator=(room&& rhs);
     void swap(room& other);
 
     room(index_t w, index_t h,
          tile_data value = tile_data {tile_type::empty, 0, 0});
-    
-    rect get_rect() const {
-        auto const w = static_cast<int>(width());
-        auto const h = static_cast<int>(height());
-
-        return {rect::tl_point{0, 0}, w, h};
-    }
-private:
 };
 
+class map : public grid2d<tile_data> {
+    using rect = bklib::axis_aligned_rect<int>;
+
+    //No implicit copies
+    map(map const&) = delete;
+    map& operator=(map const&) = delete;
+
+    map(index_t w, index_t h) : grid2d(w, h) {}
+
+    void write(room const& src, rect const& room_rect) {
+        auto const x = room_rect.left(); BK_ASSERT(x >= 0);
+        auto const y = room_rect.top();  BK_ASSERT(y >= 0);
+
+        auto& dest = *this;
+
+        for (auto const& tile : src) {
+            auto const& pos   = tile.i;
+            auto const& value = tile.value;
+
+            auto const xi = pos.x + x; BK_ASSERT(xi < width());
+            auto const yi = pos.y + y; BK_ASSERT(yi < height());
+
+            auto& t = dest[{xi, yi}];
+            BK_ASSERT(t.type == tile_type::empty);
+
+            t = value;
+        }
+    }
+};
+
+//==============================================================================
+//! Procedural generation.
+//==============================================================================
 namespace generator {
+//==============================================================================
+//! Generator for simple rectangular rooms of fixed size.
 //==============================================================================
 struct room_simple_fixed {
     room_simple_fixed(unsigned w, unsigned h)
@@ -45,6 +80,8 @@ struct room_simple_fixed {
     unsigned width_;
     unsigned height_;
 };
+//==============================================================================
+//! Generator for simple rectangular rooms of random size.
 //==============================================================================
 struct room_simple {
     using distribution = std::uniform_int_distribution<size_t>;
@@ -59,41 +96,25 @@ struct room_simple {
     distribution height_;
 };
 
-template <typename Container, typename Value, typename Test, typename Sum>
-Value accumulate_if(Container& c, Value init, Test test, Sum sum) {
-    auto it = std::cbegin(c);
-    auto end = std::cend(c);
+struct layout_base {
+    using rect = bklib::axis_aligned_rect<int>;
 
-    Value value = init;
+    std::vector<rect> rects_;
+    std::vector<room> data_;
 
-    while (end != (it = std::find_if(it, end, test))) {
-        value = sum(value, *it++);
-    }
-
-    return value;
-}
-
-template <typename T>
-struct min_max {
-    min_max(T const initial = T{0})
-      : min{initial}, max{initial}
-    {
-    }
-
-    void operator()(T const n) {
-        if (n < min) min = n;
-        else if (n > max) max = n;
-    }
-
-    T min, max;
+    bklib::min_max<int> range_x_;
+    bklib::min_max<int> range_y_; 
 };
 
+//==============================================================================
+//! Generator for simple rectangular rooms of random size.
+//==============================================================================
 struct layout_random {
     using distribution = std::uniform_int_distribution<int>;
     using rect = bklib::axis_aligned_rect<int>;
 
-    min_max<int> range_x_;
-    min_max<int> range_y_;
+    bklib::min_max<int> range_x_;
+    bklib::min_max<int> range_y_;
 
     layout_random()
     {
@@ -121,6 +142,44 @@ struct layout_random {
         range_y_(r.bottom());
     }
 
+    void normalize() {
+        auto v = bklib::make_vector2d(range_x_.min, range_y_.min);
+
+        for (auto& r : rects_) {
+            r -= v;
+        }
+
+        range_x_.max -= range_x_.min;
+        range_x_.min = 0;
+
+        range_y_.max -= range_y_.min;
+        range_y_.min = 0;
+    }
+
+    bool verify() const {
+        for (auto i = 0; i < rects_.size(); ++i) {
+            for (auto j = i + 1; j < rects_.size(); ++j) {
+                auto const& a = rects_[i];
+                auto const& b = rects_[j];
+                if (bklib::intersects(a, b)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool intersects(rect r) const {
+        return std::cend(rects_) != std::find_if(
+            std::cbegin(rects_)
+          , std::cend(rects_)
+          , [r](rect ir) {
+                return bklib::intersects(r, ir);
+            }
+        );
+    }
+
     void insert(random& rand, room&& new_room) {
         using namespace bklib;
         static auto const zero = make_vector2d(0.0f, 0.0f);
@@ -135,7 +194,7 @@ struct layout_random {
         auto get_correction = [&](rect const& test_rect) {
             auto const c = bounding_circle(test_rect);
             return accumulate_if(rects_, zero
-                , [&](rect const& r) { return intersects(r, test_rect); }
+                , [&](rect const& r) { return bklib::intersects(r, test_rect); }
                 , [&](vector2d<float> const& v, rect const& ir) {
                     return v + separation_vector(c, bounding_circle(ir));
                 }
@@ -153,12 +212,16 @@ struct layout_random {
                 test_rect = rect(rect::center_point(p), w, h);
 
                 auto correction = get_correction(test_rect);
+
+                
+
                 inserted = (zero == correction) || (zero == get_correction(
                     test_rect += round_toward<int>(correction)
                 ));
             }
         }
 
+        update_ranges(test_rect);
         rects_.emplace_back(test_rect);
         data_.emplace_back(std::move(new_room));
     }

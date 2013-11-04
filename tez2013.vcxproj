@@ -189,6 +189,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="source\algorithms.hpp" />
     <ClInclude Include="source\assert.hpp" />
     <ClInclude Include="source\callback.hpp" />
     <ClInclude Include="source\concurrent_queue.hpp" />

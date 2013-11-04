@@ -91,7 +91,7 @@ TEST(Room, SimpleRoom) {
 
     tez::generator::layout_random lay;
 
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 100; ++i) {
         auto r = gen.generate(rand);
         ASSERT_GE(r.width(), min_w);
         ASSERT_LE(r.width(), max_w);
@@ -110,4 +110,8 @@ TEST(Room, SimpleRoom) {
 
         lay.insert(rand, std::move(r));
     }
+
+    ASSERT_TRUE(lay.verify());
+    lay.normalize();
+    ASSERT_TRUE(lay.verify());
 }

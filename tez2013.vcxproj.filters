@@ -20,6 +20,7 @@
     <ClInclude Include="source\game\tile_data.hpp" />
     <ClInclude Include="source\game\grid2d.hpp" />
     <ClInclude Include="source\game\room.hpp" />
+    <ClInclude Include="source\algorithms.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\platform\window_windows.cpp" />
