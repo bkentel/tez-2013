@@ -3,25 +3,30 @@
 
 #pragma comment(lib, "D2d1.lib")
 
-namespace impl = ::bklib::impl;
-using d2d_renderer = impl::d2d_renderer;
+using namespace bklib::win;
+
+#define BK_THROW_IF_FAILED_COM(function, hresult)\
+    while (FAILED(hresult)) {\
+        BOOST_THROW_EXCEPTION(::bklib::win::com_error {}\
+            << boost::errinfo_api_function(#function)\
+            << boost::errinfo_errno(hresult)\
+        );\
+    } []() -> void {}()
 
 namespace {
-    impl::com_ptr<ID2D1Factory> create_factory() {
+    com_ptr<ID2D1Factory> create_factory() {
         ID2D1Factory* factory = nullptr;
 
         HRESULT const hr = ::D2D1CreateFactory(
             D2D1_FACTORY_TYPE_SINGLE_THREADED, &factory
         );
 
-        if (FAILED(hr)) {
-            throw "TODO";
-        }
+        BK_THROW_IF_FAILED_COM(D2D1CreateFactory, hr);
 
-        return impl::com_ptr<ID2D1Factory>(factory);
+        return com_ptr<ID2D1Factory>(factory);
     }
 
-    impl::com_ptr<ID2D1HwndRenderTarget>
+    com_ptr<ID2D1HwndRenderTarget>
     create_renderer(ID2D1Factory& factory, HWND window) {
         // Obtain the size of the drawing area.
         RECT window_rect {0};
@@ -40,14 +45,13 @@ namespace {
             ),
             &target
         );
-        if (FAILED(hr)) {
-            throw "TODO";
-        }
+        
+        BK_THROW_IF_FAILED_COM(CreateHwndRenderTarget, hr);
 
-        return impl::com_ptr<ID2D1HwndRenderTarget>(target);
+        return com_ptr<ID2D1HwndRenderTarget>(target);
     }
 
-    impl::com_ptr<ID2D1SolidColorBrush>
+    com_ptr<ID2D1SolidColorBrush>
     create_brush(ID2D1HwndRenderTarget& target) {
         ID2D1SolidColorBrush* brush = nullptr;
         HRESULT const hr = target.CreateSolidColorBrush(
@@ -55,11 +59,9 @@ namespace {
             &brush
         );
 
-        if (FAILED(hr)) {
-            throw "TODO";
-        }
+        BK_THROW_IF_FAILED_COM(CreateSolidColorBrush, hr);
 
-        return impl::com_ptr<ID2D1SolidColorBrush>(brush);
+        return com_ptr<ID2D1SolidColorBrush>(brush);
     }
 }
 

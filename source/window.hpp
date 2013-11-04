@@ -51,8 +51,19 @@ public:
     std::future<int> result_value();
 
     void do_events();
+
+    struct platform_handle;
+
+    platform_handle get_handle() const;
 private:
     std::unique_ptr<impl_t_> impl_;
 };
+
+#if defined(BOOST_OS_WINDOWS)
+struct platform_window::platform_handle {
+    operator HWND() const { return value; }
+    HWND value;
+};
+#endif
 
 } //namespace bklib

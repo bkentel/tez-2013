@@ -41,6 +41,8 @@ public:
 
     void do_events();
 
+    platform_window::platform_handle get_handle() const;
+
     void listen(on_create callback);
     void listen(on_close  callback);
     void listen(on_resize callback);

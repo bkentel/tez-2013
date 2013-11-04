@@ -12,7 +12,7 @@ namespace bklib {
 //==============================================================================
 template <typename T>
 struct min_max {
-    explicit min_max(T const initial = T{0})
+    explicit min_max(T const initial = T{0}) BK_NOEXCEPT
       : min{initial}, max{initial}
     {
     }
@@ -380,7 +380,7 @@ intersection_result<point2d<T>> intersects(
     return {u.intersects(p), p};
 }
 //==============================================================================
-// Global built-in operators.
+// Construction helpers.
 //==============================================================================
 template <typename T, typename U>
 auto make_point2d(T x, U y) -> point2d<common_type_t<T, U>> {
@@ -393,7 +393,6 @@ auto make_vector2d(T x, U y) -> vector2d<common_type_t<T, U>> {
     using type = common_type_t<T, U>;
     return {static_cast<type>(x), static_cast<type>(y)};
 }
-
 
 //==============================================================================
 // Global built-in operators.
@@ -550,45 +549,6 @@ auto operator-=(
     return (lhs = lhs - rhs);
 }
 
-//template <typename T, typename U>
-//auto operator+=(
-//    vector2d<T>&      lhs
-//  , vector2d<U> const rhs
-//) BK_NOEXCEPT -> vector2d<T>& {
-//    return (lhs = lhs + rhs);
-//}
-////------------------------------------------------------------------------------
-//template <typename T, typename U>
-//auto operator+=(
-//    point2d<T>&       lhs
-//  , vector2d<U> const rhs
-//) BK_NOEXCEPT -> point2d<T>& {
-//    return (lhs = lhs + rhs);
-//}
-///------------------------------------------------------------------------------
-//template <typename T, typename U>
-//auto operator+=(
-//    axis_aligned_rect<T>& lhs
-//  , vector2d<U> const     rhs
-//) BK_NOEXCEPT -> axis_aligned_rect<T>& {
-//    return (lhs = lhs + rhs);
-//}
-////------------------------------------------------------------------------------
-//template <typename T, typename U>
-//auto operator-=(
-//    vector2d<T>&      lhs
-//  , vector2d<U> const rhs
-//) BK_NOEXCEPT -> vector2d<T>& {
-//    return (lhs = lhs - rhs);
-//}
-////------------------------------------------------------------------------------
-//template <typename T, typename U>
-//auto operator-=(
-//    point2d<T>&       lhs
-//  , vector2d<U> const rhs
-//) BK_NOEXCEPT -> point2d<T>& {
-//    return (lhs = lhs - rhs);
-//}
 //==============================================================================
 // Other operators.
 //==============================================================================
@@ -719,30 +679,38 @@ auto distance2(
 
     return dot(a - b);
 }
+////////////////////////////////////////////////////////////////////////////////
+// Boolean intersections.
+////////////////////////////////////////////////////////////////////////////////
+
 //==============================================================================
-// Intersections
+//! circle <-> point intersection.
 //==============================================================================
-//------------------------------------------------------------------------------
-// point <-> circle intersection.
-//------------------------------------------------------------------------------
 template <typename T>
-auto intersects(circle<T> const c, point2d<T> const p) BK_NOEXCEPT
--> bool {
+auto intersects(
+    circle<T>  const c
+  , point2d<T> const p
+) BK_NOEXCEPT -> bool {
     return distance2(p, c.p) < square_of(c.r);
 }
-
+//==============================================================================
+//! point <-> circle intersection.
+//==============================================================================
 template <typename T>
-auto intersects(point2d<T> const p, circle<T> const c) BK_NOEXCEPT
--> bool {
+auto intersects(
+    point2d<T> const p
+  , circle<T> const  c
+) BK_NOEXCEPT -> bool {
     return intersects(c, p);
 }
-
-//------------------------------------------------------------------------------
-// axis_aligned_rect <-> circle intersection.
-//------------------------------------------------------------------------------
+//==============================================================================
+//! axis_aligned_rect <-> circle intersection.
+//==============================================================================
 template <typename T>
-auto intersects(axis_aligned_rect<T> const r, circle<T> const c) BK_NOEXCEPT
--> bool {
+auto intersects(
+    axis_aligned_rect<T> const r
+  , circle<T>            const c
+) BK_NOEXCEPT -> bool {
     return intersects(bounding_circle<T>(r), c) && (
         intersects(c, r.top_left())
      || intersects(c, r.top_right())
@@ -750,10 +718,74 @@ auto intersects(axis_aligned_rect<T> const r, circle<T> const c) BK_NOEXCEPT
      || intersects(c, r.bottom_right())
     );
 }
+//==============================================================================
+//! circle <-> axis_aligned_rect intersection.
+//==============================================================================
+template <typename T>
+auto intersects(
+    circle<T>            const c
+  , axis_aligned_rect<T> const r
+) BK_NOEXCEPT -> bool {
+    return intersects(r, c);
+}
+//==============================================================================
+//! axis_aligned_rect <-> axis_aligned_rect intersection.
+//==============================================================================
+template <typename T>
+bool intersects(
+    axis_aligned_rect<T> const ra
+  , axis_aligned_rect<T> const rb
+) BK_NOEXCEPT {
+    return !(
+        ra.right()  <= rb.left()
+     || ra.bottom() <= rb.top()
+     || ra.left()   >= rb.right()
+     || ra.top()    >= rb.bottom()
+    );
+}
+//==============================================================================
+//! axis_aligned_rect <-> point intersection.
+//==============================================================================
+template <typename T>
+bool intersects(
+    axis_aligned_rect<T> const r
+  , point2d<T>           const p
+) BK_NOEXCEPT {
+    return !(
+        p.x < r.left() || p.x >= r.right()
+     || p.y < r.top()  || p.y >= r.bottom()
+    );
+}
+//==============================================================================
+//! point <-> axis_aligned_rect intersection.
+//==============================================================================
+template <typename T>
+bool intersects(
+    point2d<T>           const p
+  , axis_aligned_rect<T> const r
+) BK_NOEXCEPT {
+    return intersects(r, p);
+}
+//==============================================================================
+//! circle <-> circle intersection.
+//==============================================================================
+template <typename T>
+bool intersects(
+    circle<T> const a
+  , circle<T> const b
+) BK_NOEXCEPT {
+    auto const dist = distance2(a.p, b.p);
+    auto const r    = square_of(a.r + b.r);
 
-//------------------------------------------------------------------------------
-// axis_aligned_rect <-> axis_aligned_rect intersection.
-//------------------------------------------------------------------------------
+    return dist < r;
+}
+////////////////////////////////////////////////////////////////////////////////
+// Geometric intersections.
+////////////////////////////////////////////////////////////////////////////////
+
+//==============================================================================
+//! axis_aligned_rect <-> axis_aligned_rect intersection result.
+//==============================================================================
 template <typename T>
 auto intersection_of(
     axis_aligned_rect<T> const ra
@@ -770,41 +802,6 @@ auto intersection_of(
       , {axis_aligned_rect<T>::allow_malformed{}, l, t, r, b}
     };   
 }
-//------------------------------------------------------------------------------
-template <typename T>
-bool intersects(
-    axis_aligned_rect<T> const ra
-  , axis_aligned_rect<T> const rb
-) BK_NOEXCEPT {
-    return !(
-        ra.right()  <= rb.left()
-     || ra.bottom() <= rb.top()
-     || ra.left()   >= rb.right()
-     || ra.top()    >= rb.bottom()
-    );
-}
-//------------------------------------------------------------------------------
-// point <-> axis_aligned_rect
-//------------------------------------------------------------------------------
-template <typename T>
-bool intersects(
-    axis_aligned_rect<T> const r
-  , point2d<T>           const p
-) BK_NOEXCEPT {
-    return !(
-        p.x < r.left() || p.x >= r.right()
-     || p.y < r.top()  || p.y >= r.bottom()
-    );
-}
-//------------------------------------------------------------------------------
-template <typename T>
-bool intersects(
-    point2d<T>           const p
-  , axis_aligned_rect<T> const r
-) BK_NOEXCEPT {
-    return intersects(r, p);
-}
-//------------------------------------------------------------------------------
 template <typename T>
 auto intersection_of(
     axis_aligned_rect<T> const r
@@ -823,16 +820,7 @@ auto intersection_of(
     return intersection_of(r, p);
 }
 //------------------------------------------------------------------------------
-template <typename T>
-bool intersects(
-    circle<T> const a
-  , circle<T> const b
-) BK_NOEXCEPT {
-    auto const dist = distance2(a.p, b.p);
-    auto const r    = square_of(a.r + b.r);
 
-    return dist < r;
-}
 
 //==============================================================================
 //! Generate a random direction vector.
@@ -894,25 +882,6 @@ auto bounding_circle(axis_aligned_rect<T> const rect)
     return {to_type<R>(p), r};
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Translations
-////////////////////////////////////////////////////////////////////////////////
-
-//! Translate an axis_aligned_rect.
-template <typename T>
-auto translate(axis_aligned_rect<T> const r, vector2d<T> const v) BK_NOEXCEPT
--> axis_aligned_rect<T> {
-    auto const p = axis_aligned_rect<T>::tl_point{r.top_left() + v};
-    return {p, r.width(), r.height()};
-}
-
-//! Translate a circle.
-template <typename T>
-auto translate(circle<T> const c, vector2d<T> const v) BK_NOEXCEPT
--> circle<T> {
-    return {c.p + v, c.r};
-}
-
 //==============================================================================
 //! Rounds @c n to the next most negative / positive integer value.
 //==============================================================================
@@ -950,8 +919,10 @@ point2d<R> round_toward(point2d<T> const p, vector2d<U> const v) {
     return {x, y};
 }
 
-//
-
+//==============================================================================
+//! Return a vector between the centers of @c a and @c b whose magnitude is the
+//! distance between their perimeters.
+//==============================================================================
 template <typename T, typename U>
 auto separation_vector(
     bklib::circle<T> const a
@@ -961,108 +932,5 @@ auto separation_vector(
     auto const mag = -bklib::distance(a, b);
     return mag * dir;
 };
-
-//
-////---------------
-//
-//
-//
-//
-//
-////------------------------------------------------------------------------------
-//// circle <-> point intersection
-////------------------------------------------------------------------------------
-//template <typename T>
-//intersection_result<point2d<T>>
-//intersection_of(circle<T> const c, point2d<T> const p) {
-//    auto const l2 = dot(c.p - p);
-//    auto const r2 = c.r * c.r;
-//
-//    return {l2 < r2, p};
-//}
-//
-//template <typename T>
-//intersection_result<point2d<T>>
-//intersection_of(point2d<T> const p, circle<T> const c) {
-//    return intersection_of(c, p);
-//}
-//
-////------------------------------------------------------------------------------
-//// circle <-> circle intersection
-////------------------------------------------------------------------------------
-//template <typename T>
-//intersection_result<
-//    geometric_union<circle<T>, circle<T>>
-//>
-//intersection_of(circle<T> const c1, circle<T> const c2) {
-//    auto const l2 = dot(c1.p - c2.p);
-//    auto const r2 = c1.r * c1.r + c2.r * c2.r;
-//
-//    return {l2 < r2, {c1, c2}};
-//}
-//
-//
-//
-//template <typename T>
-//std::pair<point2d<T>, point2d<T>>
-//reorder_x(point2d<T> p, point2d<T> q) {
-//    return (p.x <= q.x) ? std::make_pair(p, q) : std::make_pair(q, p);
-//}
-//
-//template <typename T>
-//std::pair<point2d<T>, point2d<T>>
-//reorder_y(point2d<T> p, point2d<T> q) {
-//    return (p.y <= q.y) ? std::make_pair(p, q) : std::make_pair(q, p);
-//}
-//
-//template <typename T>
-//std::pair<bool, point2d<T>>
-//intersect(point2d<T> p, point2d<T> q) {
-//    return (p == q) ? std::make_pair(true, p) : std::make_pair(false, p);
-//}
-//
-//template <typename T, typename U, typename V>
-//point2d<T> translate(point2d<T> const p, U const dx, V const dy) {
-//    return {p.x + dx, p.y + dy};
-//}
-//
-//
-//
-//template <typename T>
-//bool operator==(axis_aligned_rect<T> p, axis_aligned_rect<T> q) {
-//    static_assert(std::is_integral<T>::value, "not implemented"); //TODO
-//
-//    return p.left()   == q.left()
-//        && p.right()  == q.right()
-//        && p.top()    == q.top()
-//        && p.bottom() == q.bottom();
-//}
-//
-//template <typename T>
-//std::pair<bool, axis_aligned_rect<T>>
-//intersect(axis_aligned_rect<T> const ra, axis_aligned_rect<T> const rb) {
-//    return ra.intersect(rb);
-//}
-//
-//template <typename T, typename U, typename V>
-//axis_aligned_rect<T> translate(axis_aligned_rect<T> const r, U const dx, V const dy) {
-//    return axis_aligned_rect<T>(translate(r.top_left(), dx, dy), r.width(), r.height());
-//}
-//
-////==============================================================================
-//template <typename T>
-//std::pair<bool, point2d<T>>
-//intersect(axis_aligned_rect<T> const r, point2d<T> const p) {
-//    return {
-//        p.x >= r.left() && p.x < r.right() && p.y >= r.top() && p.y < r.bottom()
-//      , p
-//    };
-//}
-//
-//template <typename T>
-//std::pair<bool, point2d<T>>
-//intersect(point2d<T> const p, axis_aligned_rect<T> const r) {
-//    return intersect(r, p);
-//}
 
 } //namespace bklib

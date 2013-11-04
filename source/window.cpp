@@ -30,6 +30,10 @@ void pw::do_events() {
     impl_->do_events();
 }
 
+pw::platform_handle pw::get_handle() const {
+    return impl_->get_handle();
+}
+
 void pw::listen(on_create callback) {
     impl_->listen(callback);
 }

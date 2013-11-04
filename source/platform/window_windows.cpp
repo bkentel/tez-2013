@@ -297,6 +297,11 @@ void window::do_events() {
         event_queue_.pop()();
     }
 }
+
+bklib::platform_window::platform_handle window::get_handle() const {
+    return {window_.get()};
+}
+
 //------------------------------------------------------------------------------
 void window::shutdown() {
     push_job_([] {

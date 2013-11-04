@@ -209,6 +209,7 @@
     <ClInclude Include="source\math.hpp" />
     <ClInclude Include="source\pch.hpp" />
     <ClInclude Include="source\platform\com.hpp" />
+    <ClInclude Include="source\platform\direct2d.hpp" />
     <ClInclude Include="source\platform\ime_windows.hpp" />
     <ClInclude Include="source\platform\platform.hpp" />
     <ClInclude Include="source\platform\platform_windows.hpp" />
@@ -230,12 +231,20 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release Test|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="source\platform\direct2d.cpp" />
     <ClCompile Include="source\platform\window_windows.cpp" />
     <ClCompile Include="source\window.cpp" />
-    <ClCompile Include="tests\test_grid2d.cpp" />
+    <ClCompile Include="tests\test_grid2d.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Test|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Test|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="tests\test_math.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Test|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Test|Win32'">false</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

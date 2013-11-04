@@ -3,10 +3,7 @@
 #include <type_traits>
 #include <memory>
 
-#include <d2d1.h>
-#include <d2d1helper.h>
-#include <dwrite.h>
-#include <wincodec.h>
+#include <platform/platform_windows.hpp>
 
 #include "config.hpp"
 #include "com.hpp"
@@ -43,8 +40,7 @@ public:
 private:
     com_ptr<ID2D1Factory>          factory_;
     com_ptr<ID2D1HwndRenderTarget> target_;
-
-    com_ptr<ID2D1SolidColorBrush> brush_;
+    com_ptr<ID2D1SolidColorBrush>  brush_;
 };
 
 } //win

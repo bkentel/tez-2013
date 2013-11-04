@@ -4,6 +4,9 @@
 #include <boost/iterator/iterator_adaptor.hpp>
 
 #include "math.hpp"
+#include "game/room.hpp"
+#include "platform/direct2d.hpp"
+
 
 //using pseudo_random_t = std::mt19937;
 //using true_random_t = std::random_device;
@@ -552,115 +555,12 @@ struct quad_tree {
 };
 
 
-struct simple_room_gen {
-    using distr = std::uniform_int_distribution<unsigned>;
-
-    simple_room_gen(unsigned min_w, unsigned max_w, unsigned min_h, unsigned max_h)
-      : dist_w_(min_w, max_w)
-      , dist_h_(min_h, max_h)
-    {
-        BK_ASSERT(min_w <= max_w);
-        BK_ASSERT(min_h <= max_h);
-    }
-
-    distr dist_w_;
-    distr dist_h_;
-};
-
-
-struct random_placement_generator {
-    using random = std::mt19937;
-    using distr  = std::uniform_int_distribution<int>;
-    using rect   = bklib::axis_aligned_rect<int>;
-
-    random_placement_generator(
-        int      range_x, int      range_y,
-        unsigned min_w,   unsigned max_w,
-        unsigned min_h,   unsigned max_h
-    )
-      : distribution_x_(-range_x, range_x)
-      , distribution_y_(-range_y, range_y)
-      , distribution_w_(min_w, max_w)
-      , distribution_h_(min_h, max_h)
-      , rects_{}
-    {
-        BK_ASSERT(range_x > 0);
-        BK_ASSERT(range_y > 0);
-    }
-
-    std::pair<bool, rect> find_intersection(rect r, unsigned from = 0) const {
-        std::pair<bool, rect> result;
-
-        std::find_if(
-            std::cbegin(rects_) + from,
-            std::cend(rects_),
-            [&](rect s) -> bool { return (result = bklib::intersect(r, s)).first; }
-        );
-
-        return result;
-    }
-
-    bool generate(random& rand) {
-        auto const x = distribution_x_(rand);
-        auto const y = distribution_y_(rand);
-        auto const w = distribution_w_(rand);
-        auto const h = distribution_h_(rand);
-
-        auto const l = x;
-        auto const t = y;
-        auto const r = x + w;
-        auto const b = y + h;
-
-        rect const room_rect {
-            l
-          , t
-          , r < distribution_x_.max() ? r : distribution_x_.max()
-          , b < distribution_y_.max() ? b : distribution_y_.max()
-        };
-
-        auto ri = find_intersection(room_rect);
-
-        if (ri.first) {
-            BK_DEBUG_BREAK();
-        }
-
-        rects_.emplace_back(room_rect);
-
-        return true;
-    }
-
-    distr distribution_x_;
-    distr distribution_y_;
-    distr distribution_w_;
-    distr distribution_h_;
-
-    std::vector<rect> rects_;
-};
-
 void main()
 try {
     random rand(100);
 
-    auto gen = random_placement_generator(100, 100, 2, 10, 2, 10);
-
-    for (int i = 0; i < 25; ++i) {
-        gen.generate(rand);
-    }
-
-    point p1 {10, 10};
-    point p2 {10, 10};
-
-    auto r = (p1 == p2);
-
-    auto const pi = bklib::intersect(p1, p2);
-
-    rect r1 {0, 0, 10, 10};
-    rect r2 {10, 10, 15, 15};
-
-    auto ri = bklib::intersect(r1, r2);
-
-
     bklib::platform_window win {L"Tez"};
+    bklib::win::d2d_renderer renderer {win.get_handle()};
 
     auto on_mouse_move = [&](int x, int y) {
         std::cout << x << ", " << y << std::endl;
