@@ -327,6 +327,18 @@ struct raw_input {
         }
     }
 
+    enum state_change {
+        none    = 0,
+        down    = 1,
+        up      = 2,
+        up_down = 3,
+    };
+
+    unsigned button_state(unsigned button) const {
+        auto const flags = mouse().usButtonFlags;
+        return (flags & (3 << 2*(button - 1))) >> 2*(button - 1);
+    }
+
     std::unique_ptr<char[]> buffer_;
 };
 
@@ -337,6 +349,12 @@ LRESULT window::local_wnd_proc_(
   , LPARAM const lParam
 ) {
     switch (uMsg) {
+    default :
+        break;
+    case WM_MOUSEHWHEEL:
+        break;
+    case WM_MOUSEWHEEL :
+        break;
     case WM_INPUT : {
         auto input = raw_input{lParam};
         if (input.is_mouse()) {
@@ -347,6 +365,12 @@ LRESULT window::local_wnd_proc_(
             push_event_([=] {
                 if (on_mouse_move_) on_mouse_move_(x, y);
             });
+
+            if (mouse.ulButtons) {
+                for (unsigned i = 1; i < 8; ++i) {
+                    std::cout << "button[" << i << "] state = " << input.button_state(i) << std::endl;
+                }
+            }
 
             return 0;
         } else {
@@ -363,6 +387,22 @@ LRESULT window::local_wnd_proc_(
     case WM_DESTROY :
         ::PostQuitMessage(0);
         break;
+    case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
+    case WM_MBUTTONDOWN:
+    case WM_XBUTTONDOWN:
+        break;
+    case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONUP:
+    case WM_XBUTTONUP:
+        break;
+    case WM_LBUTTONDBLCLK:
+    case WM_RBUTTONDBLCLK:
+    case WM_MBUTTONDBLCLK:
+    case WM_XBUTTONDBLCLK:
+        break;
+
     case WM_MOUSEMOVE :
         push_event_([=] {
             auto const x = static_cast<int>(lParam & 0xFFFF);
@@ -381,8 +421,6 @@ LRESULT window::local_wnd_proc_(
               , r.bottom - r.top
             );
         });
-        break;
-    default :
         break;
     }
 

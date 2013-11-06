@@ -609,20 +609,20 @@ try {
       , render
     );
 
-    time_manager.register_event(
-        frame_time(60)
-      , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-1" << std::endl; }
-    );
+    //time_manager.register_event(
+    //    frame_time(60)
+    //  , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-1" << std::endl; }
+    //);
 
-    time_manager.register_event(
-        frame_time(60)
-      , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-2" << std::endl; }
-    );
+    //time_manager.register_event(
+    //    frame_time(60)
+    //  , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-2" << std::endl; }
+    //);
 
-    time_manager.register_event(
-        frame_time(120)
-      , [](bklib::timekeeper::delta dt) { std::cout << "timer 120" << std::endl; }
-    );
+    //time_manager.register_event(
+    //    frame_time(120)
+    //  , [](bklib::timekeeper::delta dt) { std::cout << "timer 120" << std::endl; }
+    //);
 
     while (win.is_running()) {
         win.do_events();

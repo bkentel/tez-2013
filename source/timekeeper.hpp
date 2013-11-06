@@ -40,10 +40,14 @@ public:
     //! their deadlines.
     void update();
 private:
+    bool heap_predidate_(uint16_t a, uint16_t b) const BK_NOEXCEPT {
+        return records_[a].deadline > records_[b].deadline;
+    }
+
     handle register_event_(duration period, callback f);
 
-    std::vector<record>  records_;
-    std::vector<record*> heap_;
+    std::vector<record>   records_;
+    std::vector<uint16_t> heap_;
 };
 
 } // namespace bklib

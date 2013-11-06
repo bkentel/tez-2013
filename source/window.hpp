@@ -15,6 +15,11 @@ public:
 
     BK_DECLARE_EVENT(on_move,    void(int dx, int dy));
     BK_DECLARE_EVENT(on_move_to, void(int dx, int dy));
+
+    struct button_state {
+    };
+private:
+        
 };
 
 class platform_window {

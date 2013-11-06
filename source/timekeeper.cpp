@@ -3,48 +3,36 @@
 
 using tk = bklib::timekeeper;
 
-namespace {
-    bool predicate(tk::record const* a, tk::record const* b) BK_NOEXCEPT {
-        return a->deadline > b->deadline;
-    }
-}
-
 //==============================================================================
 //! 
 //==============================================================================
 tk::timekeeper() {
-    records_.reserve(20);
 }
 //==============================================================================
 //! 
 //==============================================================================
 tk::handle tk::register_event_(duration period, callback f) {
+    using namespace std::placeholders;
+
     BK_ASSERT(f);
     BK_ASSERT(period.count() > 0);
 
     auto const now = clock::now();
     auto const deadline = now + period;
 
-    timekeeper::handle const handle = { records_.size() };
+    auto const index = records_.size();
+    timekeeper::handle const handle = { index };
 
     records_.emplace_back(record {
         handle, std::move(f), period, deadline            
     });
 
-    bool const make_heap = records_.capacity() == records_.size();
-
-    if (!make_heap) {
-        heap_.emplace_back(std::addressof(records_.back()));
-        std::push_heap(std::begin(heap_), std::end(heap_), predicate);
-    } else {
-        heap_.clear();
-        std::transform(
-            std::begin(records_), std::end(records_)
-            , std::back_inserter(heap_)
-            , [](record& r) -> record* { return &r; }
-        );
-        std::make_heap(std::begin(heap_), std::end(heap_), predicate);
-    }
+    heap_.emplace_back(index);
+    std::push_heap(
+        std::begin(heap_)
+      , std::end(heap_)
+      , std::bind(&tk::heap_predidate_, this, _1, _2)
+    );
 
     return handle;
 }
@@ -52,19 +40,30 @@ tk::handle tk::register_event_(duration period, callback f) {
 //! 
 //==============================================================================
 void tk::update() {
+    using namespace std::placeholders;
+
     auto const now = clock::now();
-    duration dt = std::chrono::seconds(1);
+    duration   dt  = std::chrono::seconds(1);
 
     while (!heap_.empty() && dt.count() >= 0) {
-        std::pop_heap(std::begin(heap_), std::end(heap_), predicate);
-        auto rec = heap_.back();
+        std::pop_heap(
+            std::begin(heap_)
+          , std::end(heap_)
+          , std::bind(&tk::heap_predidate_, this, _1, _2)
+        );
 
-        dt = now - rec->deadline;
+        auto& rec = records_[heap_.back()];
+        dt = now - rec.deadline;
+
         if (dt.count() >= 0) {
-            rec->callback(std::chrono::duration_cast<delta>(dt + rec->period));
-            rec->deadline = now + rec->period;
+            rec.callback(std::chrono::duration_cast<delta>(dt + rec.period));
+            rec.deadline = now + rec.period;
         }
 
-        std::push_heap(std::begin(heap_), std::end(heap_), predicate);
+        std::push_heap(
+            std::begin(heap_)
+          , std::end(heap_)
+          , std::bind(&tk::heap_predidate_, this, _1, _2)
+        );
     }
 }
