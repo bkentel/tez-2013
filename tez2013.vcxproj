@@ -215,6 +215,7 @@
     <ClInclude Include="source\platform\platform_windows.hpp" />
     <ClInclude Include="source\platform\window_windows.hpp" />
     <ClInclude Include="source\scope_exit.hpp" />
+    <ClInclude Include="source\timekeeper.hpp" />
     <ClInclude Include="source\types.hpp" />
     <ClInclude Include="source\window.hpp" />
   </ItemGroup>
@@ -233,6 +234,7 @@
     </ClCompile>
     <ClCompile Include="source\platform\direct2d.cpp" />
     <ClCompile Include="source\platform\window_windows.cpp" />
+    <ClCompile Include="source\timekeeper.cpp" />
     <ClCompile Include="source\window.cpp" />
     <ClCompile Include="tests\test_grid2d.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Test|Win32'">true</ExcludedFromBuild>

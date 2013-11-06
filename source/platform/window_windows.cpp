@@ -359,7 +359,7 @@ LRESULT window::local_wnd_proc_(
         });
         break;
     case WM_ERASEBKGND :
-        return 0;
+        return 1;
     case WM_DESTROY :
         ::PostQuitMessage(0);
         break;

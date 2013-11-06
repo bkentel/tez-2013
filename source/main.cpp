@@ -7,6 +7,7 @@
 #include "game/room.hpp"
 #include "platform/direct2d.hpp"
 
+#include "timekeeper.hpp"
 
 //using pseudo_random_t = std::mt19937;
 //using true_random_t = std::random_device;
@@ -554,7 +555,6 @@ struct quad_tree {
     rect bounds_;
 };
 
-
 void main()
 try {
     random rand(100);
@@ -566,10 +566,7 @@ try {
     tez::generator::layout_random layout;
 
     //--------------------------------------------------------------------------
-    using clock = std::chrono::high_resolution_clock;
-    auto last_time = clock::now();
-    //--------------------------------------------------------------------------
-    auto const render = [&] {
+    auto const render = [&](bklib::timekeeper::delta dt) {
         renderer.begin();
         renderer.clear();
 
@@ -596,20 +593,40 @@ try {
     win.listen(bklib::platform_window::on_resize{on_resize});
     win.listen(bklib::mouse::on_move{on_mouse_move});
 
+    //--------------------------------------------------------------------------    
+    //Temp
     for (auto i = 0; i < 100; ++i) {
         layout.insert(rand, room_gen.generate(rand));
     }
-    layout.normalize();    
+    layout.normalize();
+    //--------------------------------------------------------------------------
+
+    bklib::timekeeper time_manager;
+    using frame_time = std::chrono::duration<long, std::ratio<1, 60>>;
+
+    time_manager.register_event(
+        frame_time(1)
+      , render
+    );
+
+    time_manager.register_event(
+        frame_time(60)
+      , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-1" << std::endl; }
+    );
+
+    time_manager.register_event(
+        frame_time(60)
+      , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-2" << std::endl; }
+    );
+
+    time_manager.register_event(
+        frame_time(120)
+      , [](bklib::timekeeper::delta dt) { std::cout << "timer 120" << std::endl; }
+    );
 
     while (win.is_running()) {
         win.do_events();
-
-        auto cur_time = clock::now();
-        auto const dt = cur_time - last_time;
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(dt).count() > 1000 / 60) {
-            last_time = cur_time;
-            render();
-        }
+        time_manager.update();
     }
 
     auto result = win.result_value().get();

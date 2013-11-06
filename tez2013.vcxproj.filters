@@ -22,6 +22,7 @@
     <ClInclude Include="source\game\room.hpp" />
     <ClInclude Include="source\algorithms.hpp" />
     <ClInclude Include="source\platform\direct2d.hpp" />
+    <ClInclude Include="source\timekeeper.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\platform\window_windows.cpp" />
@@ -33,6 +34,7 @@
     <ClCompile Include="tests\test_grid2d.cpp" />
     <ClCompile Include="source\game\room.cpp" />
     <ClCompile Include="source\platform\direct2d.cpp" />
+    <ClCompile Include="source\timekeeper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README" />
