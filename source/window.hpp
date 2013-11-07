@@ -2,24 +2,121 @@
 
 #include <memory>
 
+//#define BOOST_CB_DISABLE_DEBUG
+#include <boost/circular_buffer.hpp>
+
 #include "types.hpp"
 #include "ime.hpp"
 #include "callback.hpp"
 
 namespace bklib {
 
+template <typename T, size_t N = sizeof(T)>
+struct print_size_of;
+
+template <typename EnumType>
+class bit_flags {
+public:
+    static_assert(std::is_enum<EnumType>::value, "must be an enum type.");
+    using storage_type = std::underlying_type_t<EnumType>;
+
+    bit_flags() BK_NOEXCEPT
+        : value_{0}
+    {
+    }
+
+    bit_flags(EnumType const value) BK_NOEXCEPT
+        : value_{ static_cast<storage_type>(value) }
+    {
+    }
+
+    inline bool operator&(EnumType const flag) const BK_NOEXCEPT {
+        return (value_ & static_cast<storage_type>(flag)) != 0;
+    }
+
+    inline bit_flags operator|(EnumType const flag) const BK_NOEXCEPT {
+        return { value_ | static_cast<storage_type>(flag) };
+    }
+
+    inline bit_flags operator|=(EnumType const flag) BK_NOEXCEPT {
+        return (*this = *this | flag);
+    }
+
+    void reset() BK_NOEXCEPT { value_ = 0; }
+    void reset(EnumType const value) BK_NOEXCEPT { value_ = static_cast<storage_type>(value); }
+private:
+    bit_flags(storage_type value) BK_NOEXCEPT : value_{value} {}
+    storage_type value_;
+};
+
 class mouse {
 public:
-    BK_DECLARE_EVENT(on_enter, void(int x, int y));
-    BK_DECLARE_EVENT(on_exit,  void(int x, int y));
+    using clock = std::chrono::high_resolution_clock;
 
-    BK_DECLARE_EVENT(on_move,    void(int dx, int dy));
-    BK_DECLARE_EVENT(on_move_to, void(int dx, int dy));
+    BK_DECLARE_EVENT(on_enter, void (mouse& m));
+    BK_DECLARE_EVENT(on_exit,  void (mouse& m));
 
-    struct button_state {
+    BK_DECLARE_EVENT(on_move,    void (mouse& m, int x, int y));
+    BK_DECLARE_EVENT(on_move_to, void (mouse& m, int dx, int dy));
+
+    BK_DECLARE_EVENT(on_mouse_down,    void (mouse& m, unsigned button));
+    BK_DECLARE_EVENT(on_mouse_up,    void (mouse& m, unsigned button));
+
+    BK_DECLARE_EVENT(on_mouse_wheel_v,    void (mouse& m, int delta));
+    BK_DECLARE_EVENT(on_mouse_wheel_h,    void (mouse& m));
+
+    enum class update_type : char {
+        none              = 0
+      , absolute_position = 1 << 0
+      , relative_position = 1 << 1
+      , button            = 1 << 2
+      , wheel_vertical    = 1 << 3
+      , wheel_horizontal  = 1 << 4
     };
+
+    enum class button_state : char {
+        unknown, is_up, went_up, is_down, went_down
+    };
+
+    struct record {
+        clock::time_point           time;
+        std::int32_t                x;
+        std::int32_t                y;
+        std::array<button_state, 5> buttons;
+        bit_flags<update_type>      flags;
+        std::int16_t                wheel_delta;
+    };
+
+    record history(size_t n = 0) const {
+        auto const size = history_.size();
+        BK_ASSERT(n < size);
+
+        auto it = history_.begin() + n;
+        record result = *it;
+        return result;
+    }
+
+    void push(record rec) {
+        history_.push_front(rec);
+    }
+
+    mouse() {
+        static auto const state = button_state::unknown;
+
+        record const rec {
+            clock::now()
+          , 0, 0
+          , {{state, state, state, state, state}}
+          , update_type::none
+          , 0
+        };
+
+        history_.set_capacity(100);
+        push(rec);
+    }
 private:
-        
+    boost::circular_buffer<record> history_;
+    clock::time_point buttons_[5];
 };
 
 class platform_window {

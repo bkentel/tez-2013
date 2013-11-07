@@ -584,8 +584,12 @@ try {
         renderer.resize(w, h);
     };
     //--------------------------------------------------------------------------
-    auto const on_mouse_move = [&](signed dx, signed dy) {
-        renderer.traslate(dx, dy);
+    auto const on_mouse_move = [&](bklib::mouse& mouse, int dx, int dy) {
+        using flags = bklib::mouse::update_type;
+        
+        if (mouse.history().buttons[0] == bklib::mouse::button_state::is_down) {
+            renderer.traslate(dx, dy);
+        }
     };
     //--------------------------------------------------------------------------
 

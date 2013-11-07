@@ -59,6 +59,8 @@ public:
 private:
     window_handle window_;
 
+    mouse mouse_state_;
+
     on_create on_create_;
     on_paint  on_paint_;
     on_close  on_close_;
@@ -66,6 +68,9 @@ private:
 
     mouse::on_move_to on_mouse_move_to_;
     mouse::on_move    on_mouse_move_;
+
+    mouse::on_mouse_down on_mouse_down_;
+    mouse::on_mouse_up   on_mouse_up_;
 
     LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:

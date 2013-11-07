@@ -277,6 +277,9 @@ try {
 
 //------------------------------------------------------------------------------
 struct raw_input {
+    raw_input(raw_input const&) = delete;
+    raw_input& operator=(raw_input const&) = delete;
+
     explicit raw_input(LPARAM lParam) {
         auto handle = reinterpret_cast<HRAWINPUT>(lParam);
 
@@ -327,63 +330,152 @@ struct raw_input {
         }
     }
 
-    enum state_change {
-        none    = 0,
-        down    = 1,
-        up      = 2,
-        up_down = 3,
-    };
-
     unsigned button_state(unsigned button) const {
         auto const flags = mouse().usButtonFlags;
         return (flags & (3 << 2*(button - 1))) >> 2*(button - 1);
+    }
+
+    bklib::mouse::record get_mouse_record(bklib::mouse::record rec) const {
+        using flags = bklib::mouse::update_type;
+        using state = bklib::mouse::button_state;
+
+        auto const& m = mouse();
+
+        rec.flags.reset();
+
+        if (m.lLastX || m.lLastY) {
+            rec.flags |= flags::relative_position;
+            rec.x = m.lLastX;
+            rec.y = m.lLastY;
+        } else {
+            rec.x = 0; rec.y = 0;
+        }
+
+        if (m.ulButtons & (RI_MOUSE_WHEEL - 1)) {
+            rec.flags |= flags::button;
+        }
+
+        for (auto i = 0u; i < 5; ++i) {
+            auto& b = rec.buttons[i];
+            switch (button_state(i+1)) {
+            case 0 :
+                if (b == state::went_down)    b = state::is_down;
+                else if (b == state::went_up) b = state::is_up;
+                break;
+            case 1 : b = state::went_down; break;
+            case 2 : b = state::went_up; break;
+            default: BK_DEBUG_BREAK(); break;
+            }
+        }
+
+        if (m.ulButtons & RI_MOUSE_WHEEL) {
+            rec.flags |= flags::wheel_vertical;
+            rec.wheel_delta = static_cast<SHORT>(m.usButtonData);
+        }
+
+        rec.time = bklib::mouse::clock::now();
+
+        return rec;
     }
 
     std::unique_ptr<char[]> buffer_;
 };
 
 //------------------------------------------------------------------------------
+
 LRESULT window::local_wnd_proc_(
     UINT   const uMsg
   , WPARAM const wParam
   , LPARAM const lParam
 ) {
+    //--------------------------------------------------------------------------
+    // WM_INPUT
+    //--------------------------------------------------------------------------
+    auto const handle_input = [&]() -> LRESULT {
+        using flags = bklib::mouse::update_type;
+
+        auto input = raw_input{lParam};
+
+        if (input.is_mouse()) {
+            auto rec = input.get_mouse_record(mouse_state_.history());
+
+            push_event_([=] {
+                mouse_state_.push(rec);
+            });            
+
+            if (rec.flags & flags::relative_position) {
+                auto const dx = rec.x;
+                auto const dy = rec.y;
+
+                push_event_([=] {
+                    if (on_mouse_move_) on_mouse_move_(mouse_state_, dx, dy);
+                });
+            }
+        }
+        
+        input.handle();
+        return 0;
+    };
+    //--------------------------------------------------------------------------
+    // WM_PAINT
+    //--------------------------------------------------------------------------
+    auto const handle_paint = [&]() -> LRESULT {
+        push_event_([this] {
+            if (on_paint_) on_paint_();
+        });
+
+        return 0;
+    };
+    //--------------------------------------------------------------------------
+    // WM_MOUSEMOVE
+    //--------------------------------------------------------------------------
+    auto const handle_mouse_move = [&]() -> LRESULT {
+        auto rec = mouse_state_.history();
+        rec.flags.reset(mouse::update_type::absolute_position);
+
+        rec.x = static_cast<int>(lParam & 0xFFFF);
+        rec.y = static_cast<int>(lParam >> 16);
+
+        push_event_([=] {
+            mouse_state_.push(rec);
+            if (on_mouse_move_to_) on_mouse_move_to_(mouse_state_, rec.x, rec.y);
+        });
+
+        return 0;
+    };
+    //--------------------------------------------------------------------------
+    // WM_SIZE
+    //--------------------------------------------------------------------------
+    auto const handle_size = [&]() -> LRESULT {
+        push_event_([this] {
+            RECT r {};
+            ::GetClientRect(handle(), &r);
+            
+            if (on_resize_) on_resize_(
+                r.right  - r.left
+              , r.bottom - r.top
+            );
+        });
+
+        return 0;
+    };
+    //--------------------------------------------------------------------------
+
     switch (uMsg) {
     default :
         break;
     case WM_MOUSEHWHEEL:
-        break;
     case WM_MOUSEWHEEL :
         break;
-    case WM_INPUT : {
-        auto input = raw_input{lParam};
-        if (input.is_mouse()) {
-            auto& mouse = input.mouse();
-            auto const x = mouse.lLastX;
-            auto const y = mouse.lLastY;
-
-            push_event_([=] {
-                if (on_mouse_move_) on_mouse_move_(x, y);
-            });
-
-            if (mouse.ulButtons) {
-                for (unsigned i = 1; i < 8; ++i) {
-                    std::cout << "button[" << i << "] state = " << input.button_state(i) << std::endl;
-                }
-            }
-
-            return 0;
-        } else {
-            input.handle();
-        }
-    } break;
+    case WM_INPUT : 
+        return handle_input();
+        break;
     case WM_PAINT :
-        push_event_([=] {
-            if (on_paint_) on_paint_();
-        });
+        return handle_paint();
         break;
     case WM_ERASEBKGND :
         return 1;
+        break;
     case WM_DESTROY :
         ::PostQuitMessage(0);
         break;
@@ -402,25 +494,11 @@ LRESULT window::local_wnd_proc_(
     case WM_MBUTTONDBLCLK:
     case WM_XBUTTONDBLCLK:
         break;
-
     case WM_MOUSEMOVE :
-        push_event_([=] {
-            auto const x = static_cast<int>(lParam & 0xFFFF);
-            auto const y = static_cast<int>(lParam >> 16);
-
-            if (on_mouse_move_to_) on_mouse_move_to_(x, y);
-        });
+        return handle_mouse_move();
         break;
     case WM_SIZE:
-        push_event_([=] {
-            RECT r {};
-            ::GetClientRect(handle(), &r);
-            
-            if (on_resize_) on_resize_(
-                r.right  - r.left
-              , r.bottom - r.top
-            );
-        });
+        return handle_size();
         break;
     }
 
