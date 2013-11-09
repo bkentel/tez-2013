@@ -587,7 +587,10 @@ try {
     auto const on_mouse_move = [&](bklib::mouse& mouse, int dx, int dy) {
         using flags = bklib::mouse::update_type;
         
-        if (mouse.history().buttons[0] == bklib::mouse::button_state::is_down) {
+        auto const button = mouse.history().buttons[0];
+
+        if (button == bklib::mouse::button_state::is_down
+         || button == bklib::mouse::button_state::went_down) {
             renderer.traslate(dx, dy);
         }
     };

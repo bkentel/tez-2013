@@ -277,18 +277,15 @@ try {
 
 //------------------------------------------------------------------------------
 struct raw_input {
-    raw_input(raw_input const&) = delete;
-    raw_input& operator=(raw_input const&) = delete;
-
     explicit raw_input(LPARAM lParam) {
         auto handle = reinterpret_cast<HRAWINPUT>(lParam);
 
-        UINT size {0};
+        buffer_size_ = 0;
         auto result = ::GetRawInputData(
             handle
           , RID_INPUT
           , 0
-          , &size
+          , &buffer_size_
           , sizeof(RAWINPUTHEADER)
         );
 
@@ -296,17 +293,17 @@ struct raw_input {
             BK_DEBUG_BREAK(); //TODO
         }
 
-        buffer_ = std::make_unique<char[]>(size);
+        buffer_ = std::make_unique<char[]>(buffer_size_);
 
         result = ::GetRawInputData(
             handle
           , RID_INPUT
           , buffer_.get()
-          , &size
+          , &buffer_size_
           , sizeof(RAWINPUTHEADER)
         );
 
-        if (result != size) {
+        if (result != buffer_size_) {
             BK_DEBUG_BREAK(); //TODO
         }
     }
@@ -359,11 +356,11 @@ struct raw_input {
             auto& b = rec.buttons[i];
             switch (button_state(i+1)) {
             case 0 :
-                if (b == state::went_down)    b = state::is_down;
-                else if (b == state::went_up) b = state::is_up;
+                if      (b == state::went_down) { b = state::is_down; }
+                else if (b == state::went_up)   { b = state::is_up; }
                 break;
             case 1 : b = state::went_down; break;
-            case 2 : b = state::went_up; break;
+            case 2 : b = state::went_up;   break;
             default: BK_DEBUG_BREAK(); break;
             }
         }
@@ -378,6 +375,26 @@ struct raw_input {
         return rec;
     }
 
+    raw_input(const raw_input& other)
+        : buffer_size_{other.buffer_size_}
+        , buffer_{std::make_unique<char[]>(buffer_size_)}
+    {
+        std::copy_n(other.buffer_.get(), buffer_size_, buffer_.get());
+    }
+
+    raw_input& operator=(const raw_input& rhs) {
+        buffer_size_ = rhs.buffer_size_;
+
+        auto temp = std::make_unique<char[]>(buffer_size_);
+        std::copy_n(rhs.buffer_.get(), buffer_size_, temp.get());
+        
+        using std::swap;
+        swap(buffer_, temp);
+
+        return *this;
+    }
+
+    size_t buffer_size_;
     std::unique_ptr<char[]> buffer_;
 };
 
@@ -397,20 +414,14 @@ LRESULT window::local_wnd_proc_(
         auto input = raw_input{lParam};
 
         if (input.is_mouse()) {
-            auto rec = input.get_mouse_record(mouse_state_.history());
-
             push_event_([=] {
+                auto rec = input.get_mouse_record(mouse_state_.history());
                 mouse_state_.push(rec);
-            });            
 
-            if (rec.flags & flags::relative_position) {
-                auto const dx = rec.x;
-                auto const dy = rec.y;
-
-                push_event_([=] {
-                    if (on_mouse_move_) on_mouse_move_(mouse_state_, dx, dy);
-                });
-            }
+                if (on_mouse_move_ && rec.flags & flags::relative_position) {
+                    on_mouse_move_(mouse_state_, rec.x, rec.y);
+                }
+            });
         }
         
         input.handle();
@@ -430,14 +441,19 @@ LRESULT window::local_wnd_proc_(
     // WM_MOUSEMOVE
     //--------------------------------------------------------------------------
     auto const handle_mouse_move = [&]() -> LRESULT {
-        auto rec = mouse_state_.history();
-        rec.flags.reset(mouse::update_type::absolute_position);
-
-        rec.x = static_cast<int>(lParam & 0xFFFF);
-        rec.y = static_cast<int>(lParam >> 16);
+        auto const x = static_cast<int>(lParam & 0xFFFF);
+        auto const y = static_cast<int>(lParam >> 16);
+        auto const time = bklib::mouse::clock::now();
 
         push_event_([=] {
+            auto rec = mouse_state_.history();
+
+            rec.flags.reset(mouse::update_type::absolute_position);
+            rec.x = x;
+            rec.y = y;
+            rec.time = time;
             mouse_state_.push(rec);
+
             if (on_mouse_move_to_) on_mouse_move_to_(mouse_state_, rec.x, rec.y);
         });
 
