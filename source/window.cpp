@@ -7,6 +7,7 @@
 
 using pw = bklib::platform_window;
 using mouse = bklib::mouse;
+using keyboard = bklib::keyboard;
 
 pw::~platform_window() {
 }
@@ -56,6 +57,12 @@ void pw::listen(mouse::on_move callback) {
     impl_->listen(callback);
 }
 void pw::listen(mouse::on_move_to callback) {
+    impl_->listen(callback);
+}
+void pw::listen(keyboard::on_keydown callback) {
+    impl_->listen(callback);
+}
+void pw::listen(keyboard::on_keyup callback) {
     impl_->listen(callback);
 }
 void pw::listen(bklib::ime_candidate_list::on_begin callback) {

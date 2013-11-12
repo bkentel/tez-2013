@@ -16,7 +16,8 @@ bklib::concurrent_queue<window::invocable> window::event_queue_;
 DWORD                               window::thread_id_ {0};
 bklib::platform_window::state window::state_ = bklib::platform_window::state::starting;
 std::promise<int> window::result_;
-//std::unique_ptr<bklib::impl::ime_manager> window::ime_manager_;
+
+std::vector<std::wstring> bklib::detail::raw_input::key_names_;
 //------------------------------------------------------------------------------
 
 namespace {
@@ -117,6 +118,8 @@ namespace {
         if (result == FALSE) {
             BK_DEBUG_BREAK(); //TODO
         }
+
+        bklib::detail::raw_input::init_key_names();
     }
 
 } //namespace
@@ -273,133 +276,80 @@ try {
     return 0;
 }
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
+namespace {
 
-//------------------------------------------------------------------------------
-struct raw_input {
-    explicit raw_input(LPARAM lParam) {
-        auto handle = reinterpret_cast<HRAWINPUT>(lParam);
+bklib::mouse::record
+get_mouse_record(
+    bklib::detail::raw_input const& input
+  , bklib::mouse::record            prev_record
+) {
+    using flags = bklib::mouse::update_type;
+    using state = bklib::mouse::button_state;
+    using mb    = bklib::detail::raw_input::mouse_button;
 
-        buffer_size_ = 0;
-        auto result = ::GetRawInputData(
-            handle
-          , RID_INPUT
-          , 0
-          , &buffer_size_
-          , sizeof(RAWINPUTHEADER)
-        );
+    auto const& m = input.mouse();
 
-        if (result != 0) {
-            BK_DEBUG_BREAK(); //TODO
-        }
+    prev_record.flags.reset();
 
-        buffer_ = std::make_unique<char[]>(buffer_size_);
-
-        result = ::GetRawInputData(
-            handle
-          , RID_INPUT
-          , buffer_.get()
-          , &buffer_size_
-          , sizeof(RAWINPUTHEADER)
-        );
-
-        if (result != buffer_size_) {
-            BK_DEBUG_BREAK(); //TODO
-        }
+    if (m.lLastX || m.lLastY) {
+        prev_record.flags |= flags::relative_position;
+        prev_record.x = m.lLastX;
+        prev_record.y = m.lLastY;
+    } else {
+        prev_record.x = 0;
+        prev_record.y = 0;
     }
 
-    RAWINPUT const* operator->() const {
-        return reinterpret_cast<RAWINPUT*>(buffer_.get());
+    if (m.ulButtons & (RI_MOUSE_WHEEL - 1)) {
+        prev_record.flags |= flags::button;
     }
 
-    bool is_mouse() const { return (*this)->header.dwType == RIM_TYPEMOUSE; }
-    
-    RAWMOUSE const& mouse() const {
-        BK_ASSERT(is_mouse());
-        return (*this)->data.mouse;
-    }
+    for (size_t i = 0; i < 5; ++i) {
+        auto& b = prev_record.buttons[i];
 
-    void handle() {
-        auto i = reinterpret_cast<RAWINPUT*>(buffer_.get());
-        auto const result = ::DefRawInputProc(&i, 1, sizeof(RAWINPUTHEADER));
-        if (result != S_OK) {
-            BK_DEBUG_BREAK(); //TODO
+        switch (input.button_state(i)) {
+        case mb::went_down : b = state::went_down; break;
+        case mb::went_up :   b = state::went_up;   break;
+        case mb::no_change :
+            if      (b == state::went_down) { b = state::is_down; }
+            else if (b == state::went_up)   { b = state::is_up; }
+            break;           
         }
     }
 
-    unsigned button_state(unsigned button) const {
-        auto const flags = mouse().usButtonFlags;
-        return (flags & (3 << 2*(button - 1))) >> 2*(button - 1);
+    if (m.ulButtons & RI_MOUSE_WHEEL) {
+        prev_record.flags |= flags::wheel_vertical;
+        prev_record.wheel_delta = static_cast<SHORT>(m.usButtonData);
     }
 
-    bklib::mouse::record get_mouse_record(bklib::mouse::record rec) const {
-        using flags = bklib::mouse::update_type;
-        using state = bklib::mouse::button_state;
+    prev_record.time = bklib::mouse::clock::now();
 
-        auto const& m = mouse();
+    return prev_record;
+}
 
-        rec.flags.reset();
-
-        if (m.lLastX || m.lLastY) {
-            rec.flags |= flags::relative_position;
-            rec.x = m.lLastX;
-            rec.y = m.lLastY;
-        } else {
-            rec.x = 0; rec.y = 0;
-        }
-
-        if (m.ulButtons & (RI_MOUSE_WHEEL - 1)) {
-            rec.flags |= flags::button;
-        }
-
-        for (auto i = 0u; i < 5; ++i) {
-            auto& b = rec.buttons[i];
-            switch (button_state(i+1)) {
-            case 0 :
-                if      (b == state::went_down) { b = state::is_down; }
-                else if (b == state::went_up)   { b = state::is_up; }
-                break;
-            case 1 : b = state::went_down; break;
-            case 2 : b = state::went_up;   break;
-            default: BK_DEBUG_BREAK(); break;
-            }
-        }
-
-        if (m.ulButtons & RI_MOUSE_WHEEL) {
-            rec.flags |= flags::wheel_vertical;
-            rec.wheel_delta = static_cast<SHORT>(m.usButtonData);
-        }
-
-        rec.time = bklib::mouse::clock::now();
-
-        return rec;
-    }
-
-    raw_input(const raw_input& other)
-        : buffer_size_{other.buffer_size_}
-        , buffer_{std::make_unique<char[]>(buffer_size_)}
-    {
-        std::copy_n(other.buffer_.get(), buffer_size_, buffer_.get());
-    }
-
-    raw_input& operator=(const raw_input& rhs) {
-        buffer_size_ = rhs.buffer_size_;
-
-        auto temp = std::make_unique<char[]>(buffer_size_);
-        std::copy_n(rhs.buffer_.get(), buffer_size_, temp.get());
-        
-        using std::swap;
-        swap(buffer_, temp);
-
-        return *this;
-    }
-
-    size_t buffer_size_;
-    std::unique_ptr<char[]> buffer_;
-};
+} //namespace
 
 //------------------------------------------------------------------------------
+namespace {
+static int translate_key(bklib::keys const key) BK_NOEXCEPT {
+    switch (key) {
+    case bklib::keys::K0 : return '0';
+    case bklib::keys::K1 : return '1';
+    case bklib::keys::K2 : return '2';
+    case bklib::keys::K3 : return '3';
+    case bklib::keys::K4 : return '4';
+    case bklib::keys::K5 : return '5';
+    case bklib::keys::K6 : return '6';
+    case bklib::keys::K7 : return '7';
+    case bklib::keys::K8 : return '8';
+    case bklib::keys::K9 : return '9';
+    }
 
+    return 0;
+}
+} //namespace
+
+//------------------------------------------------------------------------------
 LRESULT window::local_wnd_proc_(
     UINT   const uMsg
   , WPARAM const wParam
@@ -411,20 +361,37 @@ LRESULT window::local_wnd_proc_(
     auto const handle_input = [&]() -> LRESULT {
         using flags = bklib::mouse::update_type;
 
-        auto input = raw_input{lParam};
+        auto input = move_on_copy<detail::raw_input>(detail::raw_input{lParam});
 
-        if (input.is_mouse()) {
+        if (input->is_mouse()) {
             push_event_([=] {
-                auto rec = input.get_mouse_record(mouse_state_.history());
-                mouse_state_.push(rec);
+                auto prev_rec = mouse_state_.history();
+                auto record   = get_mouse_record(input.value, prev_rec);
+                
+                mouse_state_.push(record);
 
-                if (on_mouse_move_ && rec.flags & flags::relative_position) {
-                    on_mouse_move_(mouse_state_, rec.x, rec.y);
+                if (on_mouse_move_
+                 && record.flags & flags::relative_position
+                ) {
+                    on_mouse_move_(mouse_state_, record.x, record.y);
+                }
+            });
+        } else if (input->is_keyboard()) {
+            push_event_([=] {
+                auto const info = input->get_key_info();
+                auto const key = static_cast<bklib::keys>(info.vkey);
+
+                keyboard_state_.set_state(key, info.went_down);
+
+                if (info.went_down && on_keydown_) {
+                    on_keydown_(keyboard_state_, key);
+                } else if (!info.went_down && on_keyup_) {
+                    on_keyup_(keyboard_state_, key);
                 }
             });
         }
         
-        input.handle();
+        input->handle_message();
         return 0;
     };
     //--------------------------------------------------------------------------
@@ -441,20 +408,23 @@ LRESULT window::local_wnd_proc_(
     // WM_MOUSEMOVE
     //--------------------------------------------------------------------------
     auto const handle_mouse_move = [&]() -> LRESULT {
-        auto const x = static_cast<int>(lParam & 0xFFFF);
-        auto const y = static_cast<int>(lParam >> 16);
+        auto const x    = static_cast<int>(lParam & 0xFFFF);
+        auto const y    = static_cast<int>(lParam >> 16);
         auto const time = bklib::mouse::clock::now();
 
         push_event_([=] {
-            auto rec = mouse_state_.history();
+            auto record = mouse_state_.history();
 
-            rec.flags.reset(mouse::update_type::absolute_position);
-            rec.x = x;
-            rec.y = y;
-            rec.time = time;
-            mouse_state_.push(rec);
+            record.flags.reset(mouse::update_type::absolute_position);
+            record.x    = x;
+            record.y    = y;
+            record.time = time;
 
-            if (on_mouse_move_to_) on_mouse_move_to_(mouse_state_, rec.x, rec.y);
+            mouse_state_.push(record);
+
+            if (on_mouse_move_to_) {
+                on_mouse_move_to_(mouse_state_, record.x, record.y);
+            }
         });
 
         return 0;
@@ -559,9 +529,82 @@ using mouse = bklib::mouse;
 
 void window::listen(mouse::on_enter   callback) {}
 void window::listen(mouse::on_exit    callback) {}
-void window::listen(mouse::on_move    callback) { on_mouse_move_ = callback; }
+void window::listen(mouse::on_move    callback) { on_mouse_move_    = callback; }
 void window::listen(mouse::on_move_to callback) { on_mouse_move_to_ = callback; }
+
+using kb = bklib::keyboard;
+
+void window::listen(kb::on_keydown callback) { on_keydown_ = callback; }
+void window::listen(kb::on_keyup   callback) { on_keyup_   = callback; }
 
 void window::listen(bklib::ime_candidate_list::on_begin  callback) {}
 void window::listen(bklib::ime_candidate_list::on_update callback) {}
 void window::listen(bklib::ime_candidate_list::on_end    callback) {}
+
+////////////////////////////////////////////////////////////////////////////////
+// raw_input
+////////////////////////////////////////////////////////////////////////////////
+using raw_input = bklib::detail::raw_input;
+
+raw_input::raw_input(LPARAM const lParam)
+    : buffer_size_{0}
+    , buffer_{}
+{
+    auto handle = reinterpret_cast<HRAWINPUT>(lParam);
+
+    auto result = ::GetRawInputData(
+        handle
+      , RID_INPUT
+      , 0
+      , &buffer_size_
+      , sizeof(RAWINPUTHEADER)
+    );
+
+    if (result != 0) {
+        BK_DEBUG_BREAK(); //TODO
+    }
+
+    buffer_ = std::make_unique<char[]>(buffer_size_);
+
+    result = ::GetRawInputData(
+        handle
+      , RID_INPUT
+      , buffer_.get()
+      , &buffer_size_
+      , sizeof(RAWINPUTHEADER)
+    );
+
+    if (result != buffer_size_) {
+        BK_DEBUG_BREAK(); //TODO
+    }
+}
+
+//raw_input::raw_input(const raw_input& other)
+//    : buffer_size_{other.buffer_size_}
+//    , buffer_{std::make_unique<char[]>(buffer_size_)}
+//{
+//    std::copy_n(other.buffer_.get(), buffer_size_, buffer_.get());
+//}
+//
+//raw_input& raw_input::operator=(const raw_input& rhs) {
+//    buffer_size_ = rhs.buffer_size_;
+//
+//    auto temp = std::make_unique<char[]>(buffer_size_);
+//    std::copy_n(rhs.buffer_.get(), buffer_size_, temp.get());
+//        
+//    using std::swap;
+//    swap(buffer_, temp);
+//
+//    return *this;
+//}
+
+void raw_input::handle_message() {
+    auto ptr = reinterpret_cast<RAWINPUT*>(buffer_.get());
+    auto const result = ::DefRawInputProc(&ptr, 1, sizeof(RAWINPUTHEADER));
+    if (result != S_OK) {
+        BK_DEBUG_BREAK(); //TODO
+    }
+}
+
+
+//------------------------------------------------------------------------------

@@ -9,6 +9,48 @@
 
 namespace bklib {
 
+template <typename T>
+struct move_on_copy {
+    move_on_copy(T&& value)
+      : value{std::move(value)}
+    {
+    }
+
+    move_on_copy(move_on_copy&& other)
+      : value{std::move(other.value)}
+    {
+    }
+
+    move_on_copy& operator=(move_on_copy&& rhs) {
+        swap(rhs);
+        return *this;
+    }
+
+    move_on_copy(move_on_copy const& other)
+      : move_on_copy(std::move(other.value))
+    {
+    }
+
+    move_on_copy& operator=(move_on_copy const& rhs) {
+        return (*this = std::move(rhs));
+    }
+
+    T const* operator->() const { return &value; }
+    T* operator->() { return &value; }
+
+    void swap(move_on_copy& other) {
+        using std::swap;
+        swap(value, other.value);
+    }
+
+    mutable T value;
+};
+
+template <typename T>
+void swap(move_on_copy<T>& lhs, move_on_copy<T>& rhs) {
+    lhs.swap(rhs);
+}
+
 struct hwnd_deleter {
     typedef HWND pointer;
     void operator()(pointer p) const BK_NOEXCEPT {
@@ -53,24 +95,30 @@ public:
     void listen(mouse::on_move    callback);
     void listen(mouse::on_move_to callback);
 
+    void listen(keyboard::on_keydown callback);
+    void listen(keyboard::on_keyup   callback);
+
     void listen(ime_candidate_list::on_begin  callback);
     void listen(ime_candidate_list::on_update callback);
     void listen(ime_candidate_list::on_end    callback);
 private:
     window_handle window_;
 
-    mouse mouse_state_;
+    mouse    mouse_state_;
+    keyboard keyboard_state_;
 
     on_create on_create_;
     on_paint  on_paint_;
     on_close  on_close_;
     on_resize on_resize_;
 
-    mouse::on_move_to on_mouse_move_to_;
-    mouse::on_move    on_mouse_move_;
-
+    mouse::on_move_to    on_mouse_move_to_;
+    mouse::on_move       on_mouse_move_;
     mouse::on_mouse_down on_mouse_down_;
     mouse::on_mouse_up   on_mouse_up_;
+
+    keyboard::on_keydown on_keydown_;
+    keyboard::on_keyup   on_keyup_;
 
     LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
@@ -85,11 +133,138 @@ private:
 
     static concurrent_queue<invocable> work_queue_;
     static concurrent_queue<invocable> event_queue_;
-    //static bool running_;
+
     static DWORD thread_id_;
     static state state_;
     static std::promise<int> result_;
-    //static std::unique_ptr<impl::ime_manager> ime_manager_;
 };
+
+namespace detail {
+
+class raw_input {
+public:
+    explicit raw_input(LPARAM lParam);
+    raw_input(const raw_input& other) = delete;
+    raw_input& operator=(const raw_input& rhs) = delete;
+
+    raw_input(raw_input&& other)
+      : buffer_size_{other.buffer_size_}
+      , buffer_{std::move(other.buffer_)}
+    {
+    }
+
+    raw_input& operator=(raw_input&& rhs) {
+        swap(rhs);
+        return *this;
+    }
+
+    void swap(raw_input& other) {
+        using std::swap;
+        swap(buffer_size_, other.buffer_size_);
+        swap(buffer_,      other.buffer_);
+    }
+
+    bool is_mouse()    const { return get_().header.dwType == RIM_TYPEMOUSE; }
+    bool is_keyboard() const { return get_().header.dwType == RIM_TYPEKEYBOARD; }
+    bool is_hid()      const { return get_().header.dwType == RIM_TYPEHID; }
+    
+    RAWKEYBOARD const& keyboard() const {
+        BK_ASSERT(is_keyboard());
+        return get_().data.keyboard;
+    }
+
+    RAWMOUSE const& mouse() const {
+        BK_ASSERT(is_mouse());
+        return get_().data.mouse;
+    }
+
+    void handle_message();
+
+    enum class mouse_button {
+        no_change, went_down, went_up
+    };
+
+    mouse_button button_state(unsigned button) const {
+        BK_ASSERT(button < 6);
+
+        auto const flags = mouse().usButtonFlags;
+        auto const mask  = 3 << 2*button;
+        auto const shift = 2*button;
+
+        auto const result = (flags & mask) >> shift;
+        BK_ASSERT(result < 3);
+
+        return static_cast<mouse_button>(result);
+    }
+
+    struct key_info {
+        USHORT scancode;
+        USHORT vkey;
+        bool   went_down;
+    };
+
+    key_info get_key_info() const {
+        auto const& kb = keyboard();
+
+        bool const went_down = !(kb.Flags & RI_KEY_BREAK);
+        bool const is_e0     =  (kb.Flags & RI_KEY_E0) != 0;
+        bool const is_e1     =  (kb.Flags & RI_KEY_E1) != 0;
+        bool const is_pause  =  (kb.VKey == VK_PAUSE);
+            
+        // pause is a special case... bug in the API
+        USHORT const scancode = is_pause ? 0x45 : kb.MakeCode;
+
+        // as per MapVirtualKeyExW docs and associated bug with VK_PAUSE
+        UINT const flag = is_e0 ? (0xE0 << 8) :
+                          is_e1 ? (0xE1 << 8) : 0;
+        
+        // virtual key code
+        auto const vkey = ::MapVirtualKeyExW(
+            scancode | flag, MAPVK_VSC_TO_VK_EX, 0
+        );
+
+        // set the extended bit
+        auto const final_scancode = is_e0 ? scancode | 0x100 : scancode;
+
+        return {final_scancode, vkey, went_down};
+    }
+
+    static std::wstring const& get_key_name(UINT scancode) {
+        BK_ASSERT(scancode < key_names_.size());
+        return key_names_[scancode];
+    }
+
+    static void init_key_names() {
+        BK_ASSERT(key_names_.empty());
+
+        static size_t const BUF_SIZE  = 64;
+        static UINT   const KEY_COUNT = 0x200;
+
+        wchar_t name_buffer[BUF_SIZE];
+
+        key_names_.reserve(KEY_COUNT);
+
+        for (UINT scancode = 0; scancode < KEY_COUNT; ++scancode) {
+            auto const length = ::GetKeyNameTextW(
+                (scancode << 16), name_buffer, BUF_SIZE
+            );
+
+            key_names_.emplace_back(name_buffer, name_buffer + length);
+        }
+    }
+private:
+    RAWINPUT const& get_() const {
+        return *reinterpret_cast<RAWINPUT*>(buffer_.get());
+    }
+
+    size_t                  buffer_size_;
+    std::unique_ptr<char[]> buffer_;
+
+    static std::vector<std::wstring> key_names_;
+};
+
+
+} //namespace detail
+
 
 } //namespace bklib

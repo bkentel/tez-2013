@@ -595,10 +595,20 @@ try {
         }
     };
     //--------------------------------------------------------------------------
+    auto const on_keydown = [&](bklib::keyboard& kb, bklib::keys key) {
+        std::cout << static_cast<int>(key) << " went down" << std::endl;
+    };
+    //--------------------------------------------------------------------------
+    auto const on_keyup = [&](bklib::keyboard& kb, bklib::keys key) {
+        std::cout << static_cast<int>(key) << " went up" << std::endl;
+    };
+    //--------------------------------------------------------------------------
 
     win.listen(bklib::platform_window::on_paint{on_paint});
     win.listen(bklib::platform_window::on_resize{on_resize});
     win.listen(bklib::mouse::on_move{on_mouse_move});
+    win.listen(bklib::keyboard::on_keydown{on_keydown});
+    win.listen(bklib::keyboard::on_keyup{on_keyup});
 
     //--------------------------------------------------------------------------    
     //Temp

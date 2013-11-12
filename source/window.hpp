@@ -49,6 +49,46 @@ private:
     storage_type value_;
 };
 
+enum class keys : uint8_t {
+    K1, K2, K3, K4, K5, K6, K7, K8, K9, K0
+  , Q, W, E, R, T, Y, U, I, O, P
+  , A, S, D, F, G, H, J, K, L
+  , Z, X, C, V, B, N, M
+  , N7, N8, N9, N4, N5, N6, N1, N2, N3, N0
+};
+
+class keyboard {
+public:
+    using clock = std::chrono::high_resolution_clock;
+    using time_point = clock::time_point;
+    using key = bklib::keys;
+
+    struct record {
+        time_point time;
+        bool       is_down;
+    };
+
+    record operator[](key k) const {
+        auto const i = key_to_index_(k);
+        return state_[i];
+    }
+    
+    void set_state(key k, bool is_down) {
+        auto const i = key_to_index_(k);
+        state_[i].is_down = is_down;
+        state_[i].time    = clock::now();
+    }
+
+    BK_DECLARE_EVENT(on_keydown, void (keyboard& state, key k));
+    BK_DECLARE_EVENT(on_keyup,   void (keyboard& state, key k));
+private:
+    static size_t key_to_index_(key const k) BK_NOEXCEPT {
+        return static_cast<std::underlying_type_t<key>>(k);
+    }
+
+    std::array<record, 0xFF> state_;
+};
+
 class mouse {
 public:
     using clock = std::chrono::high_resolution_clock;
@@ -147,6 +187,9 @@ public:
     void listen(mouse::on_exit    callback);
     void listen(mouse::on_move    callback);
     void listen(mouse::on_move_to callback);
+
+    void listen(keyboard::on_keydown callback);
+    void listen(keyboard::on_keyup   callback);
 
     void listen(ime_candidate_list::on_begin  callback);
     void listen(ime_candidate_list::on_update callback);
