@@ -370,23 +370,27 @@ LRESULT window::local_wnd_proc_(
                 
                 mouse_state_.push(record);
 
-                if (on_mouse_move_
-                 && record.flags & flags::relative_position
-                ) {
+                bool const is_move = record.flags & flags::relative_position;
+
+                if (is_move && on_mouse_move_) {
                     on_mouse_move_(mouse_state_, record.x, record.y);
                 }
             });
         } else if (input->is_keyboard()) {
             push_event_([=] {
                 auto const info = input->get_key_info();
-                auto const key = static_cast<bklib::keys>(info.vkey);
+                if (info.discard) return;
 
-                keyboard_state_.set_state(key, info.went_down);
+                auto const repeat = keyboard_state_.set_state(
+                    info.key, info.went_down
+                );
 
-                if (info.went_down && on_keydown_) {
-                    on_keydown_(keyboard_state_, key);
+                if (repeat) {
+                    if (on_keyrepeat_) on_keyrepeat_(keyboard_state_, info.key);
+                } else if (info.went_down && on_keydown_) {
+                    on_keydown_(keyboard_state_, info.key);
                 } else if (!info.went_down && on_keyup_) {
-                    on_keyup_(keyboard_state_, key);
+                    on_keyup_(keyboard_state_, info.key);
                 }
             });
         }

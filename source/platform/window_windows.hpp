@@ -117,8 +117,9 @@ private:
     mouse::on_mouse_down on_mouse_down_;
     mouse::on_mouse_up   on_mouse_up_;
 
-    keyboard::on_keydown on_keydown_;
-    keyboard::on_keyup   on_keyup_;
+    keyboard::on_keydown   on_keydown_;
+    keyboard::on_keyup     on_keyup_;
+    keyboard::on_keyrepeat on_keyrepeat_;
 
     LRESULT local_wnd_proc_(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
@@ -199,34 +200,95 @@ public:
 
     struct key_info {
         USHORT scancode;
-        USHORT vkey;
+        keys   key;
         bool   went_down;
+        bool   discard;
     };
 
     key_info get_key_info() const {
         auto const& kb = keyboard();
 
+        if (kb.VKey == 0xFF) {
+            return {0, keys::NONE, false, true};
+        }
+
         bool const went_down = !(kb.Flags & RI_KEY_BREAK);
         bool const is_e0     =  (kb.Flags & RI_KEY_E0) != 0;
         bool const is_e1     =  (kb.Flags & RI_KEY_E1) != 0;
-        bool const is_pause  =  (kb.VKey == VK_PAUSE);
-            
-        // pause is a special case... bug in the API
-        USHORT const scancode = is_pause ? 0x45 : kb.MakeCode;
 
-        // as per MapVirtualKeyExW docs and associated bug with VK_PAUSE
-        UINT const flag = is_e0 ? (0xE0 << 8) :
-                          is_e1 ? (0xE1 << 8) : 0;
-        
+        auto const scancode = [&] {
+            // pause is a special case... bug in the API
+            if (kb.VKey == VK_PAUSE) {
+                return static_cast<USHORT>(0x45);
+            // numlock is another special case
+            } else if (kb.VKey == VK_NUMLOCK || kb.VKey == VK_LWIN || kb.VKey == VK_RWIN || kb.VKey == VK_APPS) {
+                return static_cast<USHORT>(::MapVirtualKeyW(kb.VKey, MAPVK_VK_TO_VSC) | 0x100);
+            } else if (kb.VKey == VK_SNAPSHOT) {
+                return static_cast<USHORT>(::MapVirtualKeyW(kb.VKey, MAPVK_VK_TO_VSC));
+            } else {
+                return kb.MakeCode;
+            }
+        }();
+       
         // virtual key code
-        auto const vkey = ::MapVirtualKeyExW(
-            scancode | flag, MAPVK_VSC_TO_VK_EX, 0
-        );
+        auto const vkey = [&] {
+            UINT const flag = is_e0 ? (0xE0 << 8) :
+                              is_e1 ? (0xE1 << 8) : 0;
+
+            auto const key = ::MapVirtualKeyExW(
+                scancode | flag, MAPVK_VSC_TO_VK_EX, 0
+            );
+
+            return key ? key : kb.VKey;
+        }();
+
+        bklib::keys key = [&] {
+            if (vkey >= '0' && vkey <= '9') {
+                return static_cast<bklib::keys>(vkey);
+            } else if (vkey >= 'A' && vkey <= 'Z') {
+                return static_cast<bklib::keys>(vkey);
+            } else if (!is_e0 && vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9) {
+                auto const x = vkey - VK_NUMPAD0;
+                return static_cast<bklib::keys>(static_cast<int>(keys::NUM_0) + x);
+            } else if (vkey >= VK_F1 && vkey <= VK_F24) {
+                auto const x = vkey - VK_F1;
+                return static_cast<bklib::keys>(static_cast<int>(keys::F1) + x);
+            }
+
+            switch (vkey) {
+            case VK_LCONTROL : return keys::CTRL_L;
+            case VK_RCONTROL : return keys::CTRL_R;
+            case VK_LMENU    : return keys::ALT_L;
+            case VK_RMENU    : return keys::ALT_R;
+
+            case VK_CONTROL  : return is_e0 ? keys::CTRL_R    : keys::CTRL_L;
+            case VK_MENU     : return is_e0 ? keys::ALT_R     : keys::ALT_L;
+            case VK_SHIFT    : return is_e0 ? keys::SHIFT_R   : keys::SHIFT_L;
+            case VK_RETURN   : return is_e0 ? keys::NUM_ENTER : keys::ENTER;
+            case VK_NUMPAD2  : BK_ASSERT(is_e0); return keys::DOWN;
+            case VK_NUMPAD4  : BK_ASSERT(is_e0); return keys::LEFT;
+            case VK_NUMPAD6  : BK_ASSERT(is_e0); return keys::RIGHT;
+            case VK_NUMPAD8  : BK_ASSERT(is_e0); return keys::UP;
+            case VK_INSERT   : return is_e0 ? keys::INS : keys::NUM_0;
+            case VK_DELETE   : return is_e0 ? keys::DEL : keys::NUM_DEC;
+            case VK_HOME     : return is_e0 ? keys::HOME : keys::NUM_7;
+            case VK_END      : return is_e0 ? keys::END : keys::NUM_1;
+            case VK_PRIOR    : return is_e0 ? keys::PAGE_UP : keys::NUM_9;
+            case VK_NEXT     : return is_e0 ? keys::PAGE_DOWN : keys::NUM_3;
+            case VK_LEFT     : return is_e0 ? keys::LEFT  : keys::NUM_4;
+            case VK_RIGHT    : return is_e0 ? keys::RIGHT : keys::NUM_6;
+            case VK_UP       : return is_e0 ? keys::UP    : keys::NUM_8;
+            case VK_DOWN     : return is_e0 ? keys::DOWN  : keys::NUM_2;
+            case VK_CLEAR    : BK_ASSERT(!is_e0); return keys::NUM_5;
+            }
+
+            return keys::NONE;
+        }();
 
         // set the extended bit
         auto const final_scancode = is_e0 ? scancode | 0x100 : scancode;
 
-        return {final_scancode, vkey, went_down};
+        return {scancode, key, went_down, false};
     }
 
     static std::wstring const& get_key_name(UINT scancode) {

@@ -50,11 +50,18 @@ private:
 };
 
 enum class keys : uint8_t {
-    K1, K2, K3, K4, K5, K6, K7, K8, K9, K0
-  , Q, W, E, R, T, Y, U, I, O, P
-  , A, S, D, F, G, H, J, K, L
-  , Z, X, C, V, B, N, M
-  , N7, N8, N9, N4, N5, N6, N1, N2, N3, N0
+    NONE
+  , K0 = '0', K1, K2, K3, K4, K5, K6, K7, K8, K9
+  , A  = 'A', B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
+  , NUM_0, NUM_1, NUM_2, NUM_3, NUM_4, NUM_5, NUM_6, NUM_7, NUM_8, NUM_9
+  , NUM_DIV, NUM_MUL, NUM_MIN, NUM_ADD, NUM_DEC, NUM_ENTER, NUM_LCK
+  , F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, F15, F16, F17, F18, F19, F20, F21, F22, F23, F24
+  , LEFT, RIGHT, UP, DOWN
+  , CTRL_L,  CTRL_R
+  , ALT_L,   ALT_R
+  , SHIFT_L, SHIFT_R
+  , ENTER
+  , INS, HOME, PAGE_UP, DEL, END, PAGE_DOWN,
 };
 
 class keyboard {
@@ -73,14 +80,22 @@ public:
         return state_[i];
     }
     
-    void set_state(key k, bool is_down) {
+    bool set_state(key k, bool is_down) {
         auto const i = key_to_index_(k);
-        state_[i].is_down = is_down;
-        state_[i].time    = clock::now();
+
+        if (state_[i].is_down != is_down) {
+            state_[i].is_down = is_down;
+            state_[i].time    = clock::now();
+
+            return false;
+        }
+
+        return true;
     }
 
-    BK_DECLARE_EVENT(on_keydown, void (keyboard& state, key k));
-    BK_DECLARE_EVENT(on_keyup,   void (keyboard& state, key k));
+    BK_DECLARE_EVENT(on_keydown,   void (keyboard& state, key k));
+    BK_DECLARE_EVENT(on_keyup,     void (keyboard& state, key k));
+    BK_DECLARE_EVENT(on_keyrepeat, void (keyboard& state, key k));
 private:
     static size_t key_to_index_(key const k) BK_NOEXCEPT {
         return static_cast<std::underlying_type_t<key>>(k);

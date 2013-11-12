@@ -596,7 +596,13 @@ try {
     };
     //--------------------------------------------------------------------------
     auto const on_keydown = [&](bklib::keyboard& kb, bklib::keys key) {
-        std::cout << static_cast<int>(key) << " went down" << std::endl;
+        using bklib::keys;
+
+        bool const alt = kb[keys::ALT_L].is_down || kb[keys::ALT_R].is_down;
+
+        if (alt && kb[keys::S].is_down) {
+            std::cout << "ALT-S" << std::endl;
+        }
     };
     //--------------------------------------------------------------------------
     auto const on_keyup = [&](bklib::keyboard& kb, bklib::keys key) {
