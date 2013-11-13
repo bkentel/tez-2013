@@ -90,10 +90,14 @@ public:
     void listen(on_close  callback);
     void listen(on_resize callback);
 
-    void listen(mouse::on_enter   callback);
-    void listen(mouse::on_exit    callback);
-    void listen(mouse::on_move    callback);
-    void listen(mouse::on_move_to callback);
+    void listen(mouse::on_enter         callback);
+    void listen(mouse::on_exit          callback);
+    void listen(mouse::on_move          callback);
+    void listen(mouse::on_move_to       callback);
+    void listen(mouse::on_mouse_down    callback);
+    void listen(mouse::on_mouse_up      callback);
+    void listen(mouse::on_mouse_wheel_v callback);
+    void listen(mouse::on_mouse_wheel_h callback);
 
     void listen(keyboard::on_keydown callback);
     void listen(keyboard::on_keyup   callback);
@@ -112,10 +116,12 @@ private:
     on_close  on_close_;
     on_resize on_resize_;
 
-    mouse::on_move_to    on_mouse_move_to_;
-    mouse::on_move       on_mouse_move_;
-    mouse::on_mouse_down on_mouse_down_;
-    mouse::on_mouse_up   on_mouse_up_;
+    mouse::on_move_to       on_mouse_move_to_;
+    mouse::on_move          on_mouse_move_;
+    mouse::on_mouse_down    on_mouse_down_;
+    mouse::on_mouse_up      on_mouse_up_;
+    mouse::on_mouse_wheel_v on_mouse_wheel_v_;
+    mouse::on_mouse_wheel_h on_mouse_wheel_h_;
 
     keyboard::on_keydown   on_keydown_;
     keyboard::on_keyup     on_keyup_;
@@ -286,7 +292,7 @@ public:
         }();
 
         // set the extended bit
-        auto const final_scancode = is_e0 ? scancode | 0x100 : scancode;
+//        auto const final_scancode = is_e0 ? scancode | 0x100 : scancode;
 
         return {scancode, key, went_down, false};
     }

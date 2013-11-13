@@ -66,7 +66,8 @@ namespace {
 }
 
 d2d_renderer::d2d_renderer(HWND window)
-  : x_off_{0}, y_off_{0}
+  : x_off_{0.0f}, y_off_{0.0f}
+  , x_scale_{1.0f}, y_scale_{1.0f}
   , factory_(create_factory())
   , target_(create_renderer(*factory_, window))
   , brush_(create_brush(*target_))

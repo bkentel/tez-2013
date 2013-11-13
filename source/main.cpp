@@ -9,6 +9,7 @@
 
 #include "timekeeper.hpp"
 
+
 //using pseudo_random_t = std::mt19937;
 //using true_random_t = std::random_device;
 //
@@ -584,15 +585,24 @@ try {
         renderer.resize(w, h);
     };
     //--------------------------------------------------------------------------
-    auto const on_mouse_move = [&](bklib::mouse& mouse, int dx, int dy) {
-        using flags = bklib::mouse::update_type;
-        
-        auto const button = mouse.history().buttons[0];
+    auto const on_mouse_move = [&](bklib::mouse& mouse, int dx, int dy) {       
+        bool const button = !!mouse.button(0);
 
-        if (button == bklib::mouse::button_state::is_down
-         || button == bklib::mouse::button_state::went_down) {
-            renderer.traslate(dx, dy);
+        if (!!mouse.button(0)) {
+            renderer.translate(dx, dy);
         }
+    };
+    //--------------------------------------------------------------------------
+    auto const on_mouse_scroll = [&](bklib::mouse& mouse, int delta) {       
+        static float scale = 1.0f;
+
+        if (delta > 0) {
+            scale += 0.1f;
+        } else if (delta < 0) {
+            scale *= 0.9f;
+        }
+
+        renderer.scale(scale);
     };
     //--------------------------------------------------------------------------
     auto const on_keydown = [&](bklib::keyboard& kb, bklib::keys key) {
@@ -613,6 +623,7 @@ try {
     win.listen(bklib::platform_window::on_paint{on_paint});
     win.listen(bklib::platform_window::on_resize{on_resize});
     win.listen(bklib::mouse::on_move{on_mouse_move});
+    win.listen(bklib::mouse::on_mouse_wheel_v{on_mouse_scroll});
     win.listen(bklib::keyboard::on_keydown{on_keydown});
     win.listen(bklib::keyboard::on_keyup{on_keyup});
 

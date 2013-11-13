@@ -40,17 +40,27 @@ public:
         target_->Clear(D2D1::ColorF(1.0, 0.0, 0.0));
     }
 
-    void traslate(float dx, float dy) {
+    void translate(float dx, float dy) {
         x_off_ += dx;
         y_off_ += dy;
+    }
+
+    void scale(float s) {
+        x_scale_ = s;
+        y_scale_ = s;
+    }
+
+    void skew(float sx, float sy) {
+        x_scale_ = sx;
+        y_scale_ = sy;
     }
 
     template <typename T>
     void draw_filled_rect(bklib::axis_aligned_rect<T> const r) {
         auto mat = D2D1::Matrix3x2F(
-            5.0f, 0.0
-          , 0.0f, 5.0
-          , x_off_, y_off_
+            x_scale_, 0.0f
+          , 0.0f,     y_scale_
+          , x_off_,   y_off_
         );
 
         auto const rect = D2D1::RectF(r.left(), r.top(), r.right() - 1, r.bottom() - 1);
@@ -67,6 +77,8 @@ public:
 private:
     float x_off_;
     float y_off_;
+    float x_scale_;
+    float y_scale_;
 
     com_ptr<ID2D1Factory>          factory_;
     com_ptr<ID2D1HwndRenderTarget> target_;

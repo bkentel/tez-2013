@@ -293,8 +293,8 @@ get_mouse_record(
 
     if (m.lLastX || m.lLastY) {
         prev_record.flags |= flags::relative_position;
-        prev_record.x = m.lLastX;
-        prev_record.y = m.lLastY;
+        prev_record.x = static_cast<int16_t>(m.lLastX);
+        prev_record.y = static_cast<int16_t>(m.lLastY);
     } else {
         prev_record.x = 0;
         prev_record.y = 0;
@@ -359,21 +359,45 @@ LRESULT window::local_wnd_proc_(
     // WM_INPUT
     //--------------------------------------------------------------------------
     auto const handle_input = [&]() -> LRESULT {
-        using flags = bklib::mouse::update_type;
+        using flags   = bklib::mouse::update_type;
+        using history = bklib::mouse::history_type;
 
         auto input = move_on_copy<detail::raw_input>(detail::raw_input{lParam});
 
         if (input->is_mouse()) {
             push_event_([=] {
-                auto prev_rec = mouse_state_.history();
+                auto prev_rec = mouse_state_.history(history::relative);
                 auto record   = get_mouse_record(input.value, prev_rec);
-                
-                mouse_state_.push(record);
 
-                bool const is_move = record.flags & flags::relative_position;
+                if (!!keyboard_state_[keys::ALT_L]
+                 || !!keyboard_state_[keys::ALT_L]
+                ) {
+                   record.flags |= flags::alt_down; 
+                }
+
+                if (!!keyboard_state_[keys::CTRL_L]
+                 || !!keyboard_state_[keys::CTRL_R]
+                ) {
+                   record.flags |= flags::ctrl_down; 
+                }
+
+                if (!!keyboard_state_[keys::SHIFT_L]
+                 || !!keyboard_state_[keys::SHIFT_R]
+                ) {
+                   record.flags |= flags::shift_down; 
+                }
+                
+                mouse_state_.push(history::relative, record);
+
+                bool const is_move    = record.flags & flags::relative_position;
+                bool const is_wheel_v = record.flags & flags::wheel_vertical;
 
                 if (is_move && on_mouse_move_) {
                     on_mouse_move_(mouse_state_, record.x, record.y);
+                }
+
+                if (is_wheel_v && on_mouse_wheel_v_) {
+                    on_mouse_wheel_v_(mouse_state_, record.wheel_delta);
                 }
             });
         } else if (input->is_keyboard()) {
@@ -412,19 +436,28 @@ LRESULT window::local_wnd_proc_(
     // WM_MOUSEMOVE
     //--------------------------------------------------------------------------
     auto const handle_mouse_move = [&]() -> LRESULT {
-        auto const x    = static_cast<int>(lParam & 0xFFFF);
-        auto const y    = static_cast<int>(lParam >> 16);
+        using flags   = bklib::mouse::update_type;
+        using history = bklib::mouse::history_type;
+
+        auto const x    = static_cast<int16_t>(lParam & 0xFFFF);
+        auto const y    = static_cast<int16_t>((lParam >> 16) & 0xFFFF);
         auto const time = bklib::mouse::clock::now();
 
         push_event_([=] {
-            auto record = mouse_state_.history();
+            auto record = mouse_state_.history(history::absolute);
 
-            record.flags.reset(mouse::update_type::absolute_position);
+            auto const old_flags = record.flags;
+            record.flags.reset(flags::absolute_position);
+
+            if (old_flags & flags::alt_down)   record.flags |= flags::alt_down;
+            if (old_flags & flags::ctrl_down)  record.flags |= flags::ctrl_down;
+            if (old_flags & flags::shift_down) record.flags |= flags::shift_down;
+
             record.x    = x;
             record.y    = y;
             record.time = time;
 
-            mouse_state_.push(record);
+            mouse_state_.push(history::absolute, record);
 
             if (on_mouse_move_to_) {
                 on_mouse_move_to_(mouse_state_, record.x, record.y);
@@ -531,10 +564,14 @@ void window::listen(pw::on_resize callback) { on_resize_ = callback; }
 
 using mouse = bklib::mouse;
 
-void window::listen(mouse::on_enter   callback) {}
-void window::listen(mouse::on_exit    callback) {}
-void window::listen(mouse::on_move    callback) { on_mouse_move_    = callback; }
-void window::listen(mouse::on_move_to callback) { on_mouse_move_to_ = callback; }
+void window::listen(mouse::on_enter         callback) {}
+void window::listen(mouse::on_exit          callback) {}
+void window::listen(mouse::on_move          callback) { on_mouse_move_    = callback; }
+void window::listen(mouse::on_move_to       callback) { on_mouse_move_to_ = callback; }
+void window::listen(mouse::on_mouse_down    callback) { on_mouse_down_    = callback; }
+void window::listen(mouse::on_mouse_up      callback) { on_mouse_up_      = callback; }
+void window::listen(mouse::on_mouse_wheel_v callback) { on_mouse_wheel_v_ = callback; }
+void window::listen(mouse::on_mouse_wheel_h callback) {  }
 
 using kb = bklib::keyboard;
 
