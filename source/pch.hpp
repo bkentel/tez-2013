@@ -64,6 +64,10 @@
 #include <cstdint>
 
 #include <boost/exception/all.hpp>
+#include <boost/container/flat_map.hpp>
+
+#include <jsoncpp/json.h>
+#pragma comment(lib, "jsoncpp_mtd.lib")
 
 #include "config.hpp"
 

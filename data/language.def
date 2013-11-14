@@ -1,0 +1,12 @@
+{
+    "file_id": "language"
+  , "substitute": "<missing string>"
+  , "fallback": "en"
+  , "default": "en"
+  , "language": [
+        ["en", "English (General)"]
+      , ["jp", "日本語"]
+      , ["fr", "Français"]
+      , ["de", "Deutsch"]
+    ]
+}

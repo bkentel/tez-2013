@@ -23,6 +23,7 @@
     <ClInclude Include="source\algorithms.hpp" />
     <ClInclude Include="source\platform\direct2d.hpp" />
     <ClInclude Include="source\timekeeper.hpp" />
+    <ClInclude Include="source\languages.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\platform\window_windows.cpp" />
@@ -35,6 +36,7 @@
     <ClCompile Include="source\game\room.cpp" />
     <ClCompile Include="source\platform\direct2d.cpp" />
     <ClCompile Include="source\timekeeper.cpp" />
+    <ClCompile Include="source\languages.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README" />
