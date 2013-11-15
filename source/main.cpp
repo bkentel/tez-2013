@@ -9,7 +9,8 @@
 
 #include "timekeeper.hpp"
 
-#include "languages.hpp"
+#include "game/languages.hpp"
+#include "game/tile_set.hpp"
 
 //using pseudo_random_t = std::mt19937;
 //using true_random_t = std::random_device;
@@ -599,79 +600,11 @@ using bklib::utf8string;
 
 
 
-struct tile {
-    utf8string        id;
-    tez::language_map name;
-    tez::language_map description;
-};
-
-struct tile_set {
-
-    size_t size_;
-    
-};
 
 
 void main()
 try {
-    auto info = tez::language_info::get_info("en");
-
-    //std::unordered_map<size_t, family>  families;
-    //std::unordered_map<size_t, species> species;
-    //std::unordered_map<size_t, entity>  entities;
-
-    //Json::Value  json_root;
-    //Json::Reader json_reader;
-    //
-    //std::ifstream json_in{R"(./data/entity.def)"};
-    //if (!json_in) {
-    //    BK_DEBUG_BREAK();
-    //}
-
-    //bool parsed = json_reader.parse(json_in, json_root);
-    //if (!parsed) {
-    //    BK_DEBUG_BREAK();
-    //    std::cout << json_reader.getFormattedErrorMessages();
-    //}
-    //    
-    //if (json_root["file_id"].asString() != "entity") {
-    //    BK_DEBUG_BREAK();
-    //}    
-
-    //auto const fill_language_map = [](language_map& out, Json::Value const& value) {
-    //    if (!value.isArray()) {
-    //        BK_DEBUG_BREAK();
-    //    }
-
-    //    auto hasher = std::hash<utf8string>{};
-
-    //    for (auto const& lang : value) {
-    //        if (!lang.isArray() || lang.size() != 2) {
-    //            BK_DEBUG_BREAK();
-    //        } else if (!lang[0].isString() || !lang[1].isString()) {
-    //            BK_DEBUG_BREAK();
-    //        }
-
-    //        auto id    = lang[0].asString();
-    //        auto value = lang[1].asString();
-    //        auto hash  = hasher(id);
-
-    //        out.emplace(hash, std::move(value));
-    //    }
-    //};
-
-    //auto const& fam_arr = json_root["family"];
-    //for (auto const& fam_obj : fam_arr) {
-    //    family fam;
-
-    //    fill_language_map(fam.name, fam_obj["name"]);
-    //    fill_language_map(fam.description, fam_obj["description"]);
-
-    //    fam.id = fam_obj["id"].asString();
-    //    auto hash = std::hash<utf8string>{}(fam.id);        
-
-    //    families.emplace(hash, std::move(fam));
-    //}
+    auto tile_set = tez::tile_set{};
 
     random rand(100);
 

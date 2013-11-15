@@ -11,7 +11,7 @@ namespace {
 std::once_flag once_flag;
 
 utf8string lang_fallback_string   = {"en"};
-utf8string lang_default_string    = {"en"};
+utf8string lang_default_string    = lang_fallback_string;
 utf8string lang_substitute_string = {"<substitute>"};
 
 language_id lang_fallback_id = 1;
@@ -20,6 +20,8 @@ language_id lang_default_id  = 1;
 boost::container::flat_map<size_t, language_info::info> lang_info;
 
 void init() {
+    using namespace bklib::json;
+
     static utf8string const FIELD_FILE_ID    = {"file_id"};
     static utf8string const FIELD_DEFAULT    = {"default"};
     static utf8string const FIELD_SUBSTITUTE = {"substitute"};
@@ -40,32 +42,23 @@ void init() {
         BK_DEBUG_BREAK();
         std::cout << json_reader.getFormattedErrorMessages();
     }
-        
-    if (json_root[FIELD_FILE_ID].asString() != FIELD_LANGUAGE) {
+
+    if (required_string(json_root[FIELD_FILE_ID]) != FIELD_LANGUAGE) {
         //wrong file_id
         BK_DEBUG_BREAK();
     }
 
-    auto const& languages = json_root[FIELD_LANGUAGE];
-    if (!languages.isArray()) {
-        BK_DEBUG_BREAK();
-    }
-
+    cref languages = required_array(json_root[FIELD_LANGUAGE]);
     lang_info.reserve(languages.size());
+
     string_hasher hasher;
     language_id   id = 1;
 
-    for (auto const& lang : languages) {
-        if (lang.size() != 2) {
-            BK_DEBUG_BREAK();
-        } else if (!lang[0].isString()) {
-            BK_DEBUG_BREAK();
-        } else if (!lang[1].isString()) {
-            BK_DEBUG_BREAK();
-        }
+    for (cref lang : languages) {
+        required_array(lang, 2, 2);
        
-        auto string_id = lang[0].asString();
-        auto name      = lang[1].asString();
+        auto string_id = required_string(lang[0]);
+        auto name      = required_string(lang[1]);
         auto hash      = hasher(string_id);
 
         auto const result = lang_info.emplace(
@@ -73,44 +66,35 @@ void init() {
         );
         
         if (!result.second) {
+            //duplicate
             BK_DEBUG_BREAK();
         }
 
-        id++;
+        if (++id == INVALID_LANG_ID) {
+            //wrapped around
+            BK_DEBUG_BREAK();
+        }
     }
 
-    auto const find_lang = [&](utf8string const& field) {
-        auto const& languages = lang_info;
-
-        auto const& value = json_root[field];
-        if (!value.isString()) {
-            return languages.end();
-        }
-
-        auto       string = value.asString();
-        auto const hash   = hasher(string);
-        
-        return languages.find(hash);
-    };
+    lang_default_string    = optional_string(json_root[FIELD_DEFAULT], lang_default_string);
+    lang_fallback_string   = optional_string(json_root[FIELD_FALLBACK], lang_fallback_string);
+    lang_substitute_string = optional_string(json_root[FIELD_SUBSTITUTE], lang_substitute_string);
 
     auto const end = lang_info.end();
-
-    auto it = find_lang(FIELD_DEFAULT);
-    if (it != end) {
-        lang_default_id     = std::get<0>(it->second);
-        lang_default_string = std::get<1>(it->second);
+    
+    auto it = lang_info.find(hasher(lang_default_string));
+    if (it == end) {
+        //bad language
+        BK_DEBUG_BREAK();
     }
+    lang_default_id = std::get<0>(it->second);
 
-    it = find_lang(FIELD_FALLBACK);
-    if (it != end) {
-        lang_fallback_id     = std::get<0>(it->second);
-        lang_fallback_string = std::get<1>(it->second);
+    it = lang_info.find(hasher(lang_fallback_string));
+    if (it == end) {
+        //bad language
+        BK_DEBUG_BREAK();
     }
-
-    auto const& substitute = json_root[FIELD_SUBSTITUTE];
-    if (substitute.isString()) {
-        lang_substitute_string = std::move(substitute.asString());
-    }
+    lang_fallback_id = std::get<0>(it->second);
 }
 
 } //namespace
@@ -157,30 +141,21 @@ language_map::language_map(size_t const size)
 }
 
 language_map::language_map(Json::Value const& json)
-  : language_map(json.isArray() ? json.size() : 0)
 {
-    if (!json.isArray()) {
-        BK_DEBUG_BREAK();
-    }
+    using namespace bklib::json;
 
-    for (auto const& lang : json) {
-        if (!lang.isArray()) {
-            BK_DEBUG_BREAK();
-        } else if (lang.size() != 2) {
-            BK_DEBUG_BREAK();
-        } else if (!lang[0].isString()) {
-            BK_DEBUG_BREAK();
-        } else if (!lang[1].isString()) {
-            BK_DEBUG_BREAK();
-        }
+    required_array(json);
 
-        auto id_string = lang[0].asString();
-        auto value     = lang[1].asString();
+    for (cref lang : json) {
+        required_array(lang, 2, 2);
+
+        auto id_string = required_string(lang[0]);
+        auto value     = required_string(lang[1]);
 
         auto const& info = language_info::get_info(id_string);
         auto const  id   = std::get<0>(info);
 
-        if (id == 0) {
+        if (id == INVALID_LANG_ID) {
             BK_DEBUG_BREAK();
         }
 

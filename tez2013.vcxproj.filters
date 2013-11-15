@@ -23,7 +23,9 @@
     <ClInclude Include="source\algorithms.hpp" />
     <ClInclude Include="source\platform\direct2d.hpp" />
     <ClInclude Include="source\timekeeper.hpp" />
-    <ClInclude Include="source\languages.hpp" />
+    <ClInclude Include="source\game\tile_set.hpp" />
+    <ClInclude Include="source\game\languages.hpp" />
+    <ClInclude Include="source\json.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\platform\window_windows.cpp" />
@@ -36,7 +38,9 @@
     <ClCompile Include="source\game\room.cpp" />
     <ClCompile Include="source\platform\direct2d.cpp" />
     <ClCompile Include="source\timekeeper.cpp" />
-    <ClCompile Include="source\languages.cpp" />
+    <ClCompile Include="source\game\tile_set.cpp" />
+    <ClCompile Include="source\game\languages.cpp" />
+    <ClCompile Include="source\game\json.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README" />

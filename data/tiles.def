@@ -1,9 +1,10 @@
 {
-    "file_id": "tile"
+    "file_id": "tiles"
   , "tile_size": 16
   , "file_name": "./data/tiles.png"
   , "color_key": [255, 0, 255]
-  , "tile": [
+  
+  , "tiles": [
         {
             "id": "floor"
           , "variation": [
@@ -33,5 +34,5 @@
                 }
             ]
         }
-    }
+    ]
 }

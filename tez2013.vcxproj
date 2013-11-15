@@ -203,10 +203,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <FileType>Document</FileType>
     </None>
+    <ClInclude Include="source\json.hpp" />
     <ClInclude Include="source\game\room.hpp" />
     <ClInclude Include="source\game\tile_data.hpp" />
+    <ClInclude Include="source\game\tile_set.hpp" />
     <ClInclude Include="source\ime.hpp" />
-    <ClInclude Include="source\languages.hpp" />
+    <ClInclude Include="source\game\languages.hpp" />
     <ClInclude Include="source\math.hpp" />
     <ClInclude Include="source\pch.hpp" />
     <ClInclude Include="source\platform\com.hpp" />
@@ -221,9 +223,11 @@
     <ClInclude Include="source\window.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\game\json.cpp" />
     <ClCompile Include="source\game\room.cpp" />
+    <ClCompile Include="source\game\tile_set.cpp" />
     <ClCompile Include="source\ime.cpp" />
-    <ClCompile Include="source\languages.cpp" />
+    <ClCompile Include="source\game\languages.cpp" />
     <ClCompile Include="source\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Test|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Test|Win32'">true</ExcludedFromBuild>
