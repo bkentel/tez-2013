@@ -1,38 +1,37 @@
 {
     "file_id": "tiles"
-  , "tile_size": 16
+  , "tile_size": 32
   , "file_name": "./data/tiles.png"
   , "color_key": [255, 0, 255]
-  
-  , "tiles": [
+
+  , "tile_floor": [
         {
-            "id": "floor"
-          , "variation": [
-                {
-                    "name": [
-                        ["en", "Floor"]
-                      , ["jp", "床"]
-                    ]
-                  , "description": [
-                        ["en", "A simple floor."]
-                      , ["jp", "ただの床。"]
-                    ]
-                  , "location": [0, 0]
-                  , "weight": 80
-                }
-              , {
-                    "name": [
-                        ["en", "Dirty floor"]
-                      , ["jp", "汚れた床"]
-                    ]
-                  , "description": [
-                        ["en", "A muddied floor."]
-                      , ["jp", "泥の付いた床。"]
-                    ]
-                  , "location": [0, 1]
-                  , "weight": 10
-                }
+            "type": "floor"
+          , "theme": "plain_dungeon"
+          , "name": [
+                ["en", "Floor"]
+              , ["jp", "床"]
             ]
+          , "description": [
+                ["en", "A simple floor."]
+              , ["jp", "ただの床。"]
+            ]
+          , "location": [0, 0]
+          , "weight": 80
+        }
+      , {
+            "type": "floor"
+          , "theme": "plain_dungeon"
+          , "name": [
+                ["en", "Dirty floor"]
+              , ["jp", "汚れた床"]
+            ]
+          , "description": [
+                ["en", "A muddied floor."]
+              , ["jp", "泥の付いた床。"]
+            ]
+          , "location": [0, 1]
+          , "weight": 10
         }
     ]
 }

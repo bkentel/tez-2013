@@ -223,7 +223,7 @@
     <ClInclude Include="source\window.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\game\json.cpp" />
+    <ClCompile Include="source\json.cpp" />
     <ClCompile Include="source\game\room.cpp" />
     <ClCompile Include="source\game\tile_set.cpp" />
     <ClCompile Include="source\ime.cpp" />

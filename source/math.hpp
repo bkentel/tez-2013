@@ -319,8 +319,10 @@ private:
         BK_ASSERT(h > T{0});
     }
 
-    T x0_, x1_;
-    T y0_, y1_;
+    T x0_;
+    T y0_;
+    T x1_;
+    T y1_;
 };
 //==============================================================================
 //! Result type for geometric intersections.

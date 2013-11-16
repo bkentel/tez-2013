@@ -27,6 +27,16 @@ public:
 
     void begin() {
         target_->BeginDraw();
+
+        auto mat = D2D1::Matrix3x2F(
+            x_scale_, 0.0f
+          , 0.0f,     y_scale_
+          , x_off_,   y_off_
+        );
+
+        target_->SetTransform(mat);
+
+        target_->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
     }
 
     void end() {
@@ -57,22 +67,30 @@ public:
 
     template <typename T>
     void draw_filled_rect(bklib::axis_aligned_rect<T> const r) {
-        auto mat = D2D1::Matrix3x2F(
-            x_scale_, 0.0f
-          , 0.0f,     y_scale_
-          , x_off_,   y_off_
-        );
-
         auto const rect = D2D1::RectF(r.left(), r.top(), r.right() - 1, r.bottom() - 1);
-
-        target_->SetTransform(mat);
         target_->FillRectangle(rect, brush_.get());
-        target_->DrawRectangle(rect, brush_.get());
-        target_->SetTransform(D2D1::IdentityMatrix());
     }
 
     void draw_filled_rect(float top, float left, float w, float h) {    
         target_->FillRectangle(D2D1::RectF(left, top, left + w, top + h), brush_.get());
+    }
+
+    com_ptr<ID2D1Bitmap> load_image();
+
+    using rect = bklib::axis_aligned_rect<float>;
+
+    static D2D_RECT_F& convert_rect(rect& r) {
+        return *reinterpret_cast<D2D_RECT_F*>(&r);
+    }
+
+    void draw_image(ID2D1Bitmap& image, rect dest, rect src) {
+        target_->DrawBitmap(
+            &image
+          , convert_rect(dest)
+          , 1.0f
+          , D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
+          , convert_rect(src)
+        );
     }
 private:
     float x_off_;
@@ -80,7 +98,9 @@ private:
     float x_scale_;
     float y_scale_;
 
+    com_ptr<IWICImagingFactory>    wic_factory_;
     com_ptr<ID2D1Factory>          factory_;
+
     com_ptr<ID2D1HwndRenderTarget> target_;
     com_ptr<ID2D1SolidColorBrush>  brush_;
 };

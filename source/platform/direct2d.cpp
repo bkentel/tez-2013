@@ -2,6 +2,7 @@
 #include "direct2d.hpp"
 
 #pragma comment(lib, "D2d1.lib")
+#pragma comment(lib, "Windowscodecs.lib")
 
 using namespace bklib::win;
 
@@ -14,6 +15,20 @@ using namespace bklib::win;
     } []() -> void {}()
 
 namespace {
+    com_ptr<IWICImagingFactory> create_wic_factory() {
+        IWICImagingFactory* factory = nullptr;
+
+        HRESULT const hr = ::CoCreateInstance(
+            CLSID_WICImagingFactory,
+            nullptr,
+            CLSCTX_INPROC_SERVER,
+            IID_PPV_ARGS(&factory)
+        );
+        BK_THROW_IF_FAILED_COM(D2D1CreateFactory, hr);
+
+        return com_ptr<IWICImagingFactory>(factory);
+    }
+
     com_ptr<ID2D1Factory> create_factory() {
         ID2D1Factory* factory = nullptr;
 
@@ -68,8 +83,58 @@ namespace {
 d2d_renderer::d2d_renderer(HWND window)
   : x_off_{0.0f}, y_off_{0.0f}
   , x_scale_{1.0f}, y_scale_{1.0f}
+  , wic_factory_(create_wic_factory())
   , factory_(create_factory())
   , target_(create_renderer(*factory_, window))
   , brush_(create_brush(*target_))
 {
+}
+
+com_ptr<ID2D1Bitmap> d2d_renderer::load_image() {
+    wchar_t const file_name[] = L"./data/tiles.png";
+
+    auto decoder = [&] {
+        IWICBitmapDecoder* decoder = nullptr;
+        auto const hr = wic_factory_->CreateDecoderFromFilename(
+            file_name,
+            nullptr,
+            GENERIC_READ,
+            WICDecodeMetadataCacheOnLoad,
+            &decoder
+        );
+        BK_THROW_IF_FAILED_COM(IWICImagingFactory::CreateDecoderFromFilename, hr);
+        return make_com_ptr(decoder);
+    }();
+
+    auto source = [&] {
+        IWICBitmapFrameDecode* source = nullptr;
+        auto const hr = decoder->GetFrame(0, &source);
+        BK_THROW_IF_FAILED_COM(IWICBitmapDecoder::GetFrame, hr);
+        return make_com_ptr(source);
+    }();
+
+    auto converter = [&] {
+        IWICFormatConverter * converter = nullptr;
+        auto const hr = wic_factory_->CreateFormatConverter(&converter);
+        BK_THROW_IF_FAILED_COM(IWICImagingFactory::CreateFormatConverter, hr);
+        return make_com_ptr(converter);
+    }();
+
+    auto hr = converter->Initialize(
+        source.get(),
+        GUID_WICPixelFormat32bppPBGRA,
+        WICBitmapDitherTypeNone,
+        nullptr,
+        0.0f,
+        WICBitmapPaletteTypeMedianCut
+    );
+    BK_THROW_IF_FAILED_COM(IWICFormatConverter::Initialize, hr);
+
+    ID2D1Bitmap* bitmap = nullptr;
+    hr = target_->CreateBitmapFromWicBitmap(
+        converter.get(), nullptr, &bitmap
+    );
+    BK_THROW_IF_FAILED_COM(ID2D1HwndRenderTarget::CreateBitmapFromWicBitmap, hr);
+
+    return make_com_ptr(bitmap);
 }

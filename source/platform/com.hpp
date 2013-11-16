@@ -64,4 +64,12 @@ auto make_com_ptr_from(F function) -> com_ptr<R> {
     return com_ptr<R> {result};
 }
 //------------------------------------------------------------------------------
+
+template <typename T>
+com_ptr<T> make_com_ptr(T* ptr) {
+    static_assert(std::is_convertible<T*, IUnknown*>::value, "must be a com object");
+    BK_ASSERT(ptr != nullptr);
+    return com_ptr<T>(ptr);
+}
+
 }} //namespace bklib::win

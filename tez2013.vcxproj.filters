@@ -40,7 +40,7 @@
     <ClCompile Include="source\timekeeper.cpp" />
     <ClCompile Include="source\game\tile_set.cpp" />
     <ClCompile Include="source\game\languages.cpp" />
-    <ClCompile Include="source\game\json.cpp" />
+    <ClCompile Include="source\json.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README" />

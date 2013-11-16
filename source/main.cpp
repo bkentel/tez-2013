@@ -614,13 +614,29 @@ try {
     auto room_gen = tez::generator::room_simple({2, 10}, {2, 10});
     tez::generator::layout_random layout;
 
+    auto tile_image = renderer.load_image();
+
     //--------------------------------------------------------------------------
     auto const render = [&](bklib::timekeeper::delta dt) {
         renderer.begin();
         renderer.clear();
 
+        auto src_rect = bklib::axis_aligned_rect<float>(
+            bklib::axis_aligned_rect<float>::tl_point{16.f, 0.f}, 16.f, 16.f
+        );
+
         for (auto const& r : layout.rects_) {
-            renderer.draw_filled_rect(r);
+            for (auto y = r.top(); y < r.bottom(); ++y) {
+                for (auto x = r.left(); x < r.right(); ++x) {
+                    auto dest_rect = bklib::axis_aligned_rect<float>(
+                        bklib::axis_aligned_rect<float>::tl_point{x*16.f, y*16.f}, 16.f, 16.f
+                    );
+
+                    renderer.draw_image(*tile_image, dest_rect, src_rect);
+                }
+            }
+
+            //renderer.draw_filled_rect(r);
         }
 
         renderer.end();
