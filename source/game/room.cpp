@@ -47,9 +47,7 @@ using room_simple_fixed = tez::generator::room_simple_fixed;
 room room_simple_fixed::generate(random& rand) const {
     BK_UNUSED(rand);
 
-    auto const value = tez::tile_data {
-        tez::tile_type::floor, 0, 0
-    };
+    auto const value = tez::tile_data{tez::tile_type::floor};
 
     auto result = room {width_, height_, value};
 

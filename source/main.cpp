@@ -604,15 +604,24 @@ using bklib::utf8string;
 
 void main()
 try {
-    auto tile_set = tez::tile_set{};
-
     random rand(100);
 
     bklib::platform_window win {L"Tez"};
     bklib::win::d2d_renderer renderer {win.get_handle()};
 
-    auto room_gen = tez::generator::room_simple({2, 10}, {2, 10});
-    tez::generator::layout_random layout;
+    auto level_map = [&] {
+        auto room_gen = tez::generator::room_simple({3, 10}, {3, 10});
+        tez::generator::layout_random layout;
+        //--------------------------------------------------------------------------    
+        //Temp
+        for (auto i = 0; i < 100; ++i) {
+            layout.insert(rand, room_gen.generate(rand));
+        }
+        layout.normalize();
+        //--------------------------------------------------------------------------
+
+        return layout.to_grid();
+    }();
 
     auto tile_image = renderer.load_image();
 
@@ -621,22 +630,22 @@ try {
         renderer.begin();
         renderer.clear();
 
-        auto src_rect = bklib::axis_aligned_rect<float>(
-            bklib::axis_aligned_rect<float>::tl_point{16.f, 0.f}, 16.f, 16.f
-        );
+        for (auto const& tile_info : level_map) {
+            auto const p = tile_info.i;
 
-        for (auto const& r : layout.rects_) {
-            for (auto y = r.top(); y < r.bottom(); ++y) {
-                for (auto x = r.left(); x < r.right(); ++x) {
-                    auto dest_rect = bklib::axis_aligned_rect<float>(
-                        bklib::axis_aligned_rect<float>::tl_point{x*16.f, y*16.f}, 16.f, 16.f
-                    );
+            if (tile_info.value.type == tez::tile_type::empty) continue;
 
-                    renderer.draw_image(*tile_image, dest_rect, src_rect);
-                }
-            }
+            auto const i = static_cast<int>(tile_info.value.type);
 
-            //renderer.draw_filled_rect(r);
+            auto src_rect = bklib::axis_aligned_rect<float>(
+                bklib::axis_aligned_rect<float>::tl_point{i*16.f, i*16.f}, 16.f, 16.f
+            );
+
+            auto dest_rect = bklib::axis_aligned_rect<float>(
+                bklib::axis_aligned_rect<float>::tl_point{p.x*16.f, p.y*16.f}, 16.f, 16.f
+            );
+
+            renderer.draw_image(*tile_image, dest_rect, src_rect);
         }
 
         renderer.end();
@@ -691,13 +700,7 @@ try {
     win.listen(bklib::keyboard::on_keydown{on_keydown});
     win.listen(bklib::keyboard::on_keyup{on_keyup});
 
-    //--------------------------------------------------------------------------    
-    //Temp
-    for (auto i = 0; i < 100; ++i) {
-        layout.insert(rand, room_gen.generate(rand));
-    }
-    layout.normalize();
-    //--------------------------------------------------------------------------
+
 
     bklib::timekeeper time_manager;
     using frame_time = std::chrono::duration<long, std::ratio<1, 60>>;
@@ -706,21 +709,6 @@ try {
         frame_time(1)
       , render
     );
-
-    //time_manager.register_event(
-    //    frame_time(60)
-    //  , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-1" << std::endl; }
-    //);
-
-    //time_manager.register_event(
-    //    frame_time(60)
-    //  , [](bklib::timekeeper::delta dt) { std::cout << "timer 60-2" << std::endl; }
-    //);
-
-    //time_manager.register_event(
-    //    frame_time(120)
-    //  , [](bklib::timekeeper::delta dt) { std::cout << "timer 120" << std::endl; }
-    //);
 
     while (win.is_running()) {
         win.do_events();

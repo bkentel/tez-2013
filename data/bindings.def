@@ -1,0 +1,13 @@
+{
+    "COMMAND_USE":      [["KEY_SPACE"]]
+  , "COMMAND_DIR_HERE": [["KEY_NUM5"]]
+  , "COMMAND_DIR_N":    [["KEY_UP"],    ["KEY_NUM8"]]
+  , "COMMAND_DIR_E":    [["KEY_RIGHT"], ["KEY_NUM6"]]
+  , "COMMAND_DIR_S":    [["KEY_DOWN"],  ["KEY_NUM2"]]
+  , "COMMAND_DIR_W":    [["KEY_LEFT"],  ["KEY_NUM4"]]
+  , "COMMAND_DIR_NW":   [["KEY_NUM7"]]
+  , "COMMAND_DIR_NE":   [["KEY_NUM9"]]
+  , "COMMAND_DIR_SW":   [["KEY_NUM1"]]
+  , "COMMAND_DIR_SE":   [["KEY_NUM3"]]
+
+}

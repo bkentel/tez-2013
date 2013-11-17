@@ -8,7 +8,9 @@
 
 namespace bklib { namespace json {
 
-using cref = Json::Value const&;
+using cref    = Json::Value const&;
+using value_t = Json::Value;
+using field_t = utf8string const&;
 
 struct error : virtual exception_base {};
 struct bad_type : virtual exception_base {};
@@ -68,12 +70,25 @@ T get_integer(cref value,
 }
 
 template <typename T = int>
-inline T required_integer(cref value) {
-    if (!value.isIntegral()) {
+inline T required_integer(cref value, field_t field) {
+    auto integer = value[field];
+
+    if (!integer.isIntegral()) {
         BOOST_THROW_EXCEPTION(bklib::json::bad_type());
     }
 
-    return get_integer<T>(value);
+    return get_integer<T>(integer);
+}
+
+template <typename T = int>
+inline T required_integer(cref value, size_t index) {
+    auto integer = value[index];
+
+    if (!integer.isIntegral()) {
+        BOOST_THROW_EXCEPTION(bklib::json::bad_type());
+    }
+
+    return get_integer<T>(integer);
 }
 
 template <typename T = int>
@@ -85,32 +100,57 @@ inline utf8string optional_string(cref value, utf8string fallback) {
     return value.isString() ? value.asString() : fallback;
 }
 
-inline utf8string required_string(cref value) {
-    if (!value.isString()) {
-        BOOST_THROW_EXCEPTION(bklib::json::bad_type());
+inline utf8string required_string(cref value, field_t field) {
+    auto string = value[field];
+
+    if (!string.isString()) {
+        BOOST_THROW_EXCEPTION(json::bad_type());
     }
 
-    return value.asString();
+    return string.asString();
+}
+
+inline utf8string required_string(cref value, size_t index) {
+    auto string = value[index];
+
+    if (!string.isString()) {
+        BOOST_THROW_EXCEPTION(json::bad_type());
+    }
+
+    return string.asString();
 }
 
 inline cref required_object(cref value) {
     if (!value.isObject()) {
-        BOOST_THROW_EXCEPTION(bklib::json::bad_type());
+        BOOST_THROW_EXCEPTION(json::bad_type());
     }
 
     return value;
 }
 
-inline cref required_array(cref value, size_t min_size = 0, size_t max_size = 0) {
-    if (!value.isArray()) {
-        BOOST_THROW_EXCEPTION(bklib::json::bad_type());
-    } else if (min_size != 0 && value.size() < min_size) {
-        BOOST_THROW_EXCEPTION(bklib::json::bad_size());
-    } else if (max_size != 0 && value.size() > max_size) {
-        BOOST_THROW_EXCEPTION(bklib::json::bad_size());
+inline cref required_array(
+    cref array
+  , size_t min_size = 0
+  , size_t max_size = 0
+) {
+    if (!array.isArray()) {
+        BOOST_THROW_EXCEPTION(json::bad_type());
+    } else if (min_size != 0 && array.size() < min_size) {
+        BOOST_THROW_EXCEPTION(json::bad_size());
+    } else if (max_size != 0 && array.size() > max_size) {
+        BOOST_THROW_EXCEPTION(json::bad_size());
     }
 
-    return value;
+    return array;
+}
+
+inline value_t required_array(
+    cref value
+  , field_t field
+  , size_t min_size = 0
+  , size_t max_size = 0
+) {
+    return required_array(value[field], min_size, max_size);
 }
 
 } //namespace json

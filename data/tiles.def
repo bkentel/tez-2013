@@ -4,11 +4,10 @@
   , "file_name": "./data/tiles.png"
   , "color_key": [255, 0, 255]
 
-  , "tile_floor": [
+  
+  , "floor": [
         {
-            "type": "floor"
-          , "theme": "plain_dungeon"
-          , "name": [
+           "name": [
                 ["en", "Floor"]
               , ["jp", "床"]
             ]
@@ -20,9 +19,7 @@
           , "weight": 80
         }
       , {
-            "type": "floor"
-          , "theme": "plain_dungeon"
-          , "name": [
+            "name": [
                 ["en", "Dirty floor"]
               , ["jp", "汚れた床"]
             ]

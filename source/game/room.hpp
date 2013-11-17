@@ -30,8 +30,7 @@ public:
     room& operator=(room&& rhs);
     void swap(room& other);
 
-    room(index_t w, index_t h,
-         tile_data value = tile_data {tile_type::empty, 0, 0});
+    room(index_t w, index_t h, tile_data value = tile_data{});
 };
 
 class map : public grid2d<tile_data> {
@@ -94,16 +93,6 @@ struct room_simple {
 
     distribution width_;
     distribution height_;
-};
-
-struct layout_base {
-    using rect = bklib::axis_aligned_rect<int>;
-
-    std::vector<rect> rects_;
-    std::vector<room> data_;
-
-    bklib::min_max<int> range_x_;
-    bklib::min_max<int> range_y_; 
 };
 
 //==============================================================================
@@ -244,6 +233,28 @@ struct layout_random {
         update_ranges(test_rect);
         rects_.emplace_back(test_rect);
         data_.emplace_back(std::move(new_room));
+    }
+
+    grid2d<tile_data> to_grid() const {
+        BK_ASSERT(!rects_.empty());
+        BK_ASSERT(rects_.size() == data_.size());
+
+        auto result = grid2d<tile_data>(range_x_.range(), range_y_.range());
+
+        for (size_t i = 0; i < rects_.size(); ++i) {
+            auto const& rect = rects_[i];
+            auto const& room = data_[i];
+
+            for (auto const& tile_info : room) {
+                auto pos = tile_info.i;
+                pos.x += rect.left();
+                pos.y += rect.top();
+
+                result[pos] = tile_info.value;
+            }
+        }
+
+        return result;
     }
 
     std::vector<rect> rects_;

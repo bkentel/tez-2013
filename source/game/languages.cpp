@@ -2,6 +2,7 @@
 #include "languages.hpp"
 
 using namespace tez;
+namespace json = bklib::json;
 
 utf8string const language_info::FILE_NAME = R"(./data/language.def)";
 
@@ -19,14 +20,25 @@ language_id lang_default_id  = 1;
 
 boost::container::flat_map<size_t, language_info::info> lang_info;
 
+static utf8string const FIELD_FILE_ID    = {"file_id"};
+static utf8string const FIELD_DEFAULT    = {"default"};
+static utf8string const FIELD_SUBSTITUTE = {"substitute"};
+static utf8string const FIELD_FALLBACK   = {"fallback"};
+static utf8string const FIELD_LANGUAGE   = {"language"};
+
+std::pair<utf8string, utf8string> language_pair(json::cref value) {
+    auto array = json::required_array(value, 2, 2);
+
+    auto result = std::make_pair(
+        json::required_string(array, 0)
+      , json::required_string(array, 1)
+    );
+
+    return result;
+}
+
 void init() {
     using namespace bklib::json;
-
-    static utf8string const FIELD_FILE_ID    = {"file_id"};
-    static utf8string const FIELD_DEFAULT    = {"default"};
-    static utf8string const FIELD_SUBSTITUTE = {"substitute"};
-    static utf8string const FIELD_FALLBACK   = {"fallback"};
-    static utf8string const FIELD_LANGUAGE   = {"language"};
 
     Json::Value  json_root;
     Json::Reader json_reader;
@@ -43,26 +55,28 @@ void init() {
         std::cout << json_reader.getFormattedErrorMessages();
     }
 
-    if (required_string(json_root[FIELD_FILE_ID]) != FIELD_LANGUAGE) {
+    if (required_string(json_root, FIELD_FILE_ID) != FIELD_LANGUAGE) {
         //wrong file_id
         BK_DEBUG_BREAK();
     }
 
-    cref languages = required_array(json_root[FIELD_LANGUAGE]);
+    cref languages = required_array(json_root, FIELD_LANGUAGE);
     lang_info.reserve(languages.size());
 
     string_hasher hasher;
     language_id   id = 1;
 
     for (cref lang : languages) {
-        required_array(lang, 2, 2);
-       
-        auto string_id = required_string(lang[0]);
-        auto name      = required_string(lang[1]);
-        auto hash      = hasher(string_id);
+        auto pair = language_pair(lang);
+        auto hash = hasher(pair.first);
 
         auto const result = lang_info.emplace(
-            hash, std::make_tuple(id, std::move(string_id), std::move(name))
+            hash
+          , std::make_tuple(
+                id
+              , std::move(pair.first)
+              , std::move(pair.second)
+            )
         );
         
         if (!result.second) {
@@ -144,22 +158,18 @@ language_map::language_map(Json::Value const& json)
 {
     using namespace bklib::json;
 
-    required_array(json);
+    auto array = required_array(json);
+    for (cref lang : array) {
+        auto pair = language_pair(lang);
 
-    for (cref lang : json) {
-        required_array(lang, 2, 2);
-
-        auto id_string = required_string(lang[0]);
-        auto value     = required_string(lang[1]);
-
-        auto const& info = language_info::get_info(id_string);
+        auto const& info = language_info::get_info(pair.first);
         auto const  id   = std::get<0>(info);
 
         if (id == INVALID_LANG_ID) {
             BK_DEBUG_BREAK();
         }
 
-        insert(id, std::move(value));
+        insert(id, std::move(pair.second));
     }
 }
 
