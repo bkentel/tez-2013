@@ -52,16 +52,6 @@ struct tile_data {
 
 static_assert(sizeof(tile_data) == 16, "unexpected size");
 
-struct tile_wall {
-    tile_wall(tile_data& data) : data{data}
-    {
-    }
 
-    direction& direction() {
-        
-    }
-
-    tile_data& data;
-};
 
 } //namespace tez

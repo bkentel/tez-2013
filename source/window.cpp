@@ -1,7 +1,7 @@
 #include "pch.hpp"
 #include "window.hpp"
 
-#if defined(BK_PLATFORM_WINDOWS)
+#if defined(BOOST_OS_WINDOWS)
 #   include "platform/window_windows.hpp"
 #endif
 
@@ -99,57 +99,25 @@ pw::platform_handle pw::get_handle() const {
     return impl_->get_handle();
 }
 
-void pw::listen(on_create callback) {
-    impl_->listen(callback);
-}
-void pw::listen(on_paint callback) {
-    impl_->listen(callback);
-}
-void pw::listen(on_close  callback) {
-    impl_->listen(callback);
-}
-void pw::listen(on_resize callback) {
-    impl_->listen(callback);
-}
-void pw::listen(mouse::on_enter callback) {
-    impl_->listen(callback);
-}
-void pw::listen(mouse::on_exit callback) {
-    impl_->listen(callback);
+#define BK_DEFINE_EVENT(event)\
+void pw::listen(event callback) {\
+    impl_->listen(callback);\
 }
 
-void pw::listen(mouse::on_move callback) {
-    impl_->listen(callback);
-}
-void pw::listen(mouse::on_move_to callback) {
-    impl_->listen(callback);
-}
-void pw::listen(mouse::on_mouse_down callback) {
-    impl_->listen(callback);
-}
-void pw::listen(mouse::on_mouse_up callback) {
-    impl_->listen(callback);
-}
-void pw::listen(mouse::on_mouse_wheel_v callback) {
-    impl_->listen(callback);
-}
-void pw::listen(mouse::on_mouse_wheel_h callback) {
-    impl_->listen(callback);
-}
-
-void pw::listen(keyboard::on_keydown callback) {
-    impl_->listen(callback);
-}
-void pw::listen(keyboard::on_keyup callback) {
-    impl_->listen(callback);
-}
-
-void pw::listen(bklib::ime_candidate_list::on_begin callback) {
-    impl_->listen(callback);
-}
-void pw::listen(bklib::ime_candidate_list::on_update callback) {
-    impl_->listen(callback);
-}
-void pw::listen(bklib::ime_candidate_list::on_end callback) {
-    impl_->listen(callback);
-}
+BK_DEFINE_EVENT(on_create)
+BK_DEFINE_EVENT(on_paint)
+BK_DEFINE_EVENT(on_close)
+BK_DEFINE_EVENT(on_resize)
+BK_DEFINE_EVENT(mouse::on_enter)
+BK_DEFINE_EVENT(mouse::on_exit)
+BK_DEFINE_EVENT(mouse::on_move)
+BK_DEFINE_EVENT(mouse::on_move_to)
+BK_DEFINE_EVENT(mouse::on_mouse_down)
+BK_DEFINE_EVENT(mouse::on_mouse_up)
+BK_DEFINE_EVENT(mouse::on_mouse_wheel_v)
+BK_DEFINE_EVENT(mouse::on_mouse_wheel_h)
+BK_DEFINE_EVENT(keyboard::on_keydown)
+BK_DEFINE_EVENT(keyboard::on_keyup)
+BK_DEFINE_EVENT(bklib::ime_candidate_list::on_begin)
+BK_DEFINE_EVENT(bklib::ime_candidate_list::on_update)
+BK_DEFINE_EVENT(bklib::ime_candidate_list::on_end)

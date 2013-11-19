@@ -1,17 +1,29 @@
 #pragma once
 
+//==============================================================================
+//! @file
+//! Include files for windows and windows libraries.
+//==============================================================================
+
+#include <Windows.h>
+#include <Unknwn.h>
+#include <ObjIdl.h>
+
+#include <d2d1.h>
+#include <d2d1helper.h>
+#pragma comment(lib, "D2d1.lib")
+
+#include <dwrite.h>
+#pragma comment(lib, "Dwrite.lib")
+
+#include <wincodec.h>
+#pragma comment(lib, "Windowscodecs.lib")
+
+#include <imm.h>
+#pragma comment(lib, "Imm32.lib")
+
 #include "config.hpp"
 #include "exception.hpp"
-
-#if defined(BOOST_OS_WINDOWS)
-#   include <Windows.h>
-#   include <d2d1.h>
-#   include <d2d1helper.h>
-#   include <dwrite.h>
-#   include <wincodec.h>
-#   include <imm.h>
-#   include <Unknwn.h>
-#   include <ObjIdl.h>
 
 namespace bklib { namespace win {
 
@@ -35,5 +47,3 @@ for (;;) { \
         << boost::errinfo_errno(::GetLastError()) \
     ); \
 } []{}
-
-#endif

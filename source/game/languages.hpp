@@ -12,7 +12,7 @@ using bklib::string_hasher;
 
 using language_id = uint8_t;
 
-static language_id const INVALID_LANG_ID = 0;
+BK_CONSTEXPR static language_id const INVALID_LANG_ID {0};
 
 //==============================================================================
 //!
@@ -47,15 +47,11 @@ public:
     explicit language_map(size_t size = 0);
     explicit language_map(Json::Value const& json);
 
-    language_map(language_map&& other)
-      : values_{std::move(other.values_)}
-    {
-    }
+    language_map(language_map&&) = default;
+    language_map& operator=(language_map&&) = default;
 
-    language_map& operator=(language_map&& rhs) {
-        swap(rhs);
-        return *this;
-    }
+    language_map(language_map const&) = delete;
+    language_map& operator=(language_map const&) = delete;
 
     void swap(language_map& other) {
         using std::swap;

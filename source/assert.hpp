@@ -1,15 +1,17 @@
 #pragma once
 
-#include <exception>
+#include <cstdlib>
 
-#ifdef BK_COMPILER_MSVC
+#if defined(BOOST_COMP_MSVC)
 #   define BK_DEBUG_BREAK __debugbreak
+#else
+#   error "define me" //TODO
 #endif
 
 #define BK_ASSERT(condition) \
 do { \
     if (!(condition)) { \
         BK_DEBUG_BREAK(); \
-        std::terminate(); \
+        std::abort(); \
     } \
 } while (!(condition))

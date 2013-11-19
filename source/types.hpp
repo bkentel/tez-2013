@@ -2,7 +2,7 @@
 
 #include <string>
 #include <functional>
-#include <boost/container/flat_map.hpp>
+#include <cstdint>
 
 #include "config.hpp"
 
@@ -17,8 +17,10 @@ using uint32_t = ::std::uint32_t;
 using uint64_t = ::std::uint64_t;
 
 namespace bklib {
-
-#if defined(BK_PLATFORM_WINDOWS)
+    using utf8string    = std::string;
+    using string_hasher = std::hash<utf8string>;
+    using hash          = string_hasher::result_type;
+#if defined(BOOST_OS_WINDOWS)
     using platform_char   = wchar_t;
     using platform_string = std::basic_string<platform_char>;
 #else
@@ -27,11 +29,13 @@ namespace bklib {
 #endif
     using invocable = std::function<void()>;
 
-    using utf8string = std::string;
-    using string_hasher = std::hash<utf8string>;
 
-    using boost::container::flat_map;
+static size_t utf8string_hash(char const* str) BK_NOEXCEPT {
+    size_t result {5381};
+    while (*str) {
+        result = result * 33 ^ *str++;
+    }
+    return result;
+}
+
 } //namespace bklib
-
-//TODO
-#define BK_UNUSED(x) (void)(x)

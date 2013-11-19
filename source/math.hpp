@@ -53,14 +53,14 @@ using enable_for_integral_t = typename std::enable_if<
 //! @see if_not_void_t.
 //==============================================================================
 template <typename Test, typename Default>
-struct if_not_void : std::conditional<
+struct if_not_void : public std::conditional<
     std::is_void<Test>::value, Default, Test
 > { };
 //==============================================================================
 //! @see if_not_void_common_t.
 //==============================================================================
 template <typename Test, typename T1, typename T2>
-struct if_not_void_common : std::conditional<
+struct if_not_void_common : public std::conditional<
     std::is_void<Test>::value, typename std::common_type<T1, T2>::type, Test
 > { };
 //==============================================================================
@@ -155,12 +155,12 @@ T square_of(T const x) { return x*x; }
 //! 2D point type.
 //==============================================================================
 template <typename T>
-struct point2d { T x, y; };
+struct point2d { T x; T y; };
 //==============================================================================
 //! 2D vector type.
 //==============================================================================
 template <typename T>
-struct vector2d { T x, y; };
+struct vector2d { T x; T y; };
 //==============================================================================
 //! Circle type.
 //==============================================================================
@@ -385,26 +385,27 @@ intersection_result<point2d<T>> intersects(
 // Construction helpers.
 //==============================================================================
 template <typename T, typename U>
-auto make_point2d(T x, U y) -> point2d<common_type_t<T, U>> {
+inline auto make_point2d(T const x, U const y) BK_NOEXCEPT {
     using type = common_type_t<T, U>;
-    return {static_cast<type>(x), static_cast<type>(y)};
+    point2d<type> result = {static_cast<type>(x), static_cast<type>(y)};
+    return result;
 }
 
 template <typename T, typename U>
-auto make_vector2d(T x, U y) -> vector2d<common_type_t<T, U>> {
+inline auto make_vector2d(T x, U y) BK_NOEXCEPT {
     using type = common_type_t<T, U>;
-    return {static_cast<type>(x), static_cast<type>(y)};
+    vector2d<type> result = {static_cast<type>(x), static_cast<type>(y)};
+    return result;
 }
 
 //==============================================================================
 // Global built-in operators.
 //==============================================================================
 template <typename T>
-auto operator==(
+bool operator==(
     axis_aligned_rect<T> const lhs
   , axis_aligned_rect<T> const rhs
-) BK_NOEXCEPT
--> bool {
+) BK_NOEXCEPT {
     return is_equal(lhs.left(),   rhs.left())
         && is_equal(lhs.right(),  rhs.right())
         && is_equal(lhs.top(),    rhs.top())
@@ -412,11 +413,10 @@ auto operator==(
 }
 //------------------------------------------------------------------------------
 template <typename T>
-auto operator!=(
+bool operator!=(
     axis_aligned_rect<T> const lhs
   , axis_aligned_rect<T> const rhs
-) BK_NOEXCEPT
--> bool {
+) BK_NOEXCEPT {
     return !(lhs == rhs);
 }
 //------------------------------------------------------------------------------
@@ -443,111 +443,88 @@ bool operator!=(vector2d<T> const lhs, vector2d<T> const rhs) BK_NOEXCEPT {
 }
 //------------------------------------------------------------------------------
 template <typename T>
-auto operator-(vector2d<T> const v) BK_NOEXCEPT -> vector2d<T> {
-    return {-v.x, -v.y};
+auto operator-(vector2d<T> const v) BK_NOEXCEPT {
+    return vector2d<T>{-v.x, -v.y};
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator*(
-    vector2d<T> const v
-  , U           const c
-) BK_NOEXCEPT -> vector2d<common_type_t<T, U>> {
-    return {c * v.x, c * v.y};
+auto operator*(vector2d<T> const v, U const c) BK_NOEXCEPT {
+    using type = vector2d<common_type_t<T, U>>;
+    return type{c * v.x, c * v.y};
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator*(
-    T           const c
-  , vector2d<U> const v
-) BK_NOEXCEPT -> vector2d<common_type_t<T, U>> {
+auto operator*(T const c, vector2d<U> const v) BK_NOEXCEPT {
     return v * c;
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator/(
-    vector2d<T> const v
-  , U           const c
-) BK_NOEXCEPT -> vector2d<common_type_t<T, U>> {
-    return {v.x / c, v.y / c};
+auto operator/(vector2d<T> const v, U const c) BK_NOEXCEPT {
+    vector2d<common_type_t<T, U>> result = {v.x / c, v.y / c};
+    return result;
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator/(
-    U           const c
-  , vector2d<T> const v
-) BK_NOEXCEPT -> vector2d<common_type_t<T, U>> {
+auto operator/(U const c, vector2d<T> const v) BK_NOEXCEPT {
     return v / c;
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator+(vector2d<T> const u, vector2d<U> const v) BK_NOEXCEPT
--> vector2d<common_type_t<T, U>> {
-    return {u.x + v.x, u.y + v.y};
+vector2d<common_type_t<T, U>> operator+(vector2d<T> const u, vector2d<U> const v) BK_NOEXCEPT {
+    return make_vector2d(u.x + v.x, u.y + v.y);
+
+//    vector2d<common_type_t<T, U>> result = {u.x + v.x, u.y + v.y};
+    //return result;
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator+(
-    point2d<T>  const p
-  , vector2d<U> const v
-) BK_NOEXCEPT -> point2d<common_type_t<T, U>> {
-    return {p.x + v.x, p.y + v.y};
+auto operator+(point2d<T> const p, vector2d<U> const v) BK_NOEXCEPT {
+    point2d<common_type_t<T, U>> result = {p.x + v.x, p.y + v.y};
+    return result;
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator+(
-    axis_aligned_rect<T> const r
-  , vector2d<U>          const v
-) BK_NOEXCEPT -> axis_aligned_rect<common_type_t<T, U>> {
-    axis_aligned_rect<common_type_t<T, U>>::tl_point const p = r.top_left() + v;
-    return {p, r.width(), r.height()};
+auto operator+(axis_aligned_rect<T> const r, vector2d<U> const v) BK_NOEXCEPT {
+    using type = axis_aligned_rect<common_type_t<T, U>>;
+    type::tl_point const p = r.top_left() + v;
+    return type{p, r.width(), r.height()};
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator-(
-    vector2d<T> const u
-  , vector2d<U> const v
-) BK_NOEXCEPT -> vector2d<common_type_t<T, U>> {
-    return {u.x - v.x, u.y - v.y};
+auto operator-(vector2d<T> const u, vector2d<U> const v) BK_NOEXCEPT {
+    using type = vector2d<common_type_t<T, U>>;
+    return type{u.x - v.x, u.y - v.y};
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator-(
-    point2d<T>  const p
-  , vector2d<U> const v
-) BK_NOEXCEPT -> point2d<common_type_t<T, U>> {
-    return {p.x - v.x, p.y - v.y};
+auto operator-(point2d<T> const p, vector2d<U> const v) BK_NOEXCEPT {
+    using type = point2d<common_type_t<T, U>>;
+    return type{p.x - v.x, p.y - v.y};
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator-(
-    point2d<T> const p
-  , point2d<U> const q
-) BK_NOEXCEPT -> vector2d<common_type_t<T, U>> {
-    return {p.x - q.x, p.y - q.y};
+vector2d<common_type_t<T, U>> operator-(point2d<T> const p, point2d<U> const q) BK_NOEXCEPT {
+    vector2d<common_type_t<T, U>> result = {p.x - q.x, p.y - q.y};
+    return result;
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator-(
-    axis_aligned_rect<T> const r
-  , vector2d<U>          const v
-) BK_NOEXCEPT -> axis_aligned_rect<common_type_t<T, U>> {
-    axis_aligned_rect<common_type_t<T, U>>::tl_point const p = r.top_left() - v;
-    return {p, r.width(), r.height()};
+auto operator-(axis_aligned_rect<T> const r, vector2d<U> const v) BK_NOEXCEPT {
+    using type = axis_aligned_rect<common_type_t<T, U>>;
+    type::tl_point const p = r.top_left() - v;
+
+    type result{p, r.width(), r.height()};
+
+    return result;
 }
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto operator+=(
-    T&                lhs
-  , vector2d<U> const rhs
-) BK_NOEXCEPT -> T& {
+T& operator+=(T& lhs, vector2d<U> const rhs) BK_NOEXCEPT {
     return (lhs = lhs + rhs);
 }
 
 template <typename T, typename U>
-auto operator-=(
-    T&                lhs
-  , vector2d<U> const rhs
-) BK_NOEXCEPT -> T& {
+T& operator-=(T& lhs, vector2d<U> const rhs) BK_NOEXCEPT {
     return (lhs = lhs - rhs);
 }
 
@@ -555,18 +532,13 @@ auto operator-=(
 // Other operators.
 //==============================================================================
 template <typename R = void, typename T = void, typename U = void>
-auto dot(
-    vector2d<T> const u
-  , vector2d<U> const v
-) BK_NOEXCEPT -> if_not_void_common_t<R, T, U> {
+auto dot(vector2d<T> const u, vector2d<U> const v) BK_NOEXCEPT {
     using type = if_not_void_common_t<R, T, U>;
     return static_cast<type>(u.x * v.x + u.y * v.y);
 }
 //------------------------------------------------------------------------------
 template <typename R = void, typename T = void>
-auto dot(
-    vector2d<T> const v
-) BK_NOEXCEPT -> if_not_void_t<R, T> {
+auto dot(vector2d<T> const v) BK_NOEXCEPT {
     using type = if_not_void_t<R, T>;
     return static_cast<type>(dot(v, v));
 }
@@ -576,11 +548,9 @@ auto dot(
 //! If T is a floating point type, then T, otherwise Default.
 //==============================================================================
 template <typename T, typename Default = float>
-using floating_point_t = std::conditional_t<
-    std::is_floating_point<T>::value
-  , T
-  , Default
->;
+using floating_point_t = typename std::conditional<
+    std::is_floating_point<T>::value, T, Default
+>::type;
 
 //==============================================================================
 //! @returns The scalar magnitude of the vector @c v as @c R or a floating
@@ -588,9 +558,7 @@ using floating_point_t = std::conditional_t<
 //! @tparam R The result type if not @c void.
 //==============================================================================
 template <typename R = void, typename T>
-auto magnitude(
-    vector2d<T> const v
-) BK_NOEXCEPT -> if_not_void_t<R, floating_point_t<T>> {
+inline auto magnitude(vector2d<T> const v) BK_NOEXCEPT {
     using type = if_not_void_t<R, floating_point_t<T>>;
     return static_cast<type>(std::sqrt(dot(v)));
 }
@@ -599,15 +567,15 @@ auto magnitude(
 //! @tparam R The element type if not @c void.
 //==============================================================================
 template <typename R = void, typename T>
-auto direction(
-    vector2d<T> const v
-) BK_NOEXCEPT -> vector2d<if_not_void_t<R, floating_point_t<T>>> {
+inline auto direction(vector2d<T> const v) BK_NOEXCEPT {
     using type = if_not_void_t<R, floating_point_t<T>>;
-    auto const mag = magnitude<type>(v);
+    type const mag = magnitude<type>(v);
 
-    if (is_equal(mag, type{0})) return to_type<type>(v);
-    else                        return v / mag;
+    vector2d<type> result = is_equal(mag, type{0}) ? to_type<type>(v) : (v / mag);
+
+    return result;
 }
+
 //------------------------------------------------------------------------------
 template <typename T>
 T area(axis_aligned_rect<T> const r) BK_NOEXCEPT {
@@ -617,14 +585,12 @@ T area(axis_aligned_rect<T> const r) BK_NOEXCEPT {
 // Conversions.
 //==============================================================================
 template <typename R, typename T>
-auto to_type(vector2d<T> const v) BK_NOEXCEPT
--> vector2d<R> {
+vector2d<R> to_type(vector2d<T> const v) BK_NOEXCEPT {
     return {static_cast<R>(v.x), static_cast<R>(v.y)};
 }
 
 template <typename R, typename T>
-auto to_type(point2d<T> const p) BK_NOEXCEPT
--> point2d<R> {
+point2d<R> to_type(point2d<T> const p) BK_NOEXCEPT {
     return {static_cast<R>(p.x), static_cast<R>(p.y)};
 }
 
@@ -635,17 +601,15 @@ auto to_type(point2d<T> const p) BK_NOEXCEPT
 // point <-> point
 //------------------------------------------------------------------------------
 template <typename T, typename U>
-auto distance2(point2d<T> const a, point2d<U> const b) BK_NOEXCEPT
--> common_type_t<T, U> {
+auto distance2(point2d<T> const a, point2d<U> const b) BK_NOEXCEPT {
     return dot(a - b);
 }
 //------------------------------------------------------------------------------
 template <typename R = void, typename T = void, typename U = void>
-auto distance(point2d<T> const a, point2d<U> const b) BK_NOEXCEPT
--> if_not_void_t<R, common_type_t<T, U>> {
-    using result_t = if_not_void_t<R, common_type_t<T, U>>;
+auto distance(point2d<T> const a, point2d<U> const b) BK_NOEXCEPT {
+    using type = if_not_void_t<R, common_type_t<T, U>>;
 
-    return static_cast<result_t>(
+    return static_cast<type>(
         std::sqrt(distance2(a, b))
     );
 }
@@ -653,11 +617,10 @@ auto distance(point2d<T> const a, point2d<U> const b) BK_NOEXCEPT
 // circle <-> circle
 //------------------------------------------------------------------------------
 template <typename R = void, typename T = void, typename U = void>
-auto distance(circle<T> const a, circle<U> const b) BK_NOEXCEPT
--> if_not_void_t<R, common_type_t<T, U>> {
-    using result_t = if_not_void_t<R, T>;
+auto distance(circle<T> const a, circle<U> const b) BK_NOEXCEPT {
+    using type = if_not_void_t<R, T>;
 
-    return static_cast<result_t>(
+    return static_cast<type>(
         std::sqrt(dot(a.p - b.p)) - a.r - b.r
     );
 }
@@ -669,13 +632,12 @@ template <
   , typename CornerB = axis_aligned_rect<T>::center_t
   , typename T = void
 >
-auto distance2(
+T distance2(
     axis_aligned_rect<T> const ra
   , axis_aligned_rect<T> const rb
   , CornerA = CornerA{}
   , CornerB = CornerB{}
-) BK_NOEXCEPT
--> T {
+) BK_NOEXCEPT {
     auto const a = ra.get_point(CornerA{});
     auto const b = ra.get_point(CornerB{});
 
@@ -689,30 +651,21 @@ auto distance2(
 //! circle <-> point intersection.
 //==============================================================================
 template <typename T>
-auto intersects(
-    circle<T>  const c
-  , point2d<T> const p
-) BK_NOEXCEPT -> bool {
+bool intersects(circle<T> const c, point2d<T> const p) BK_NOEXCEPT {
     return distance2(p, c.p) < square_of(c.r);
 }
 //==============================================================================
 //! point <-> circle intersection.
 //==============================================================================
 template <typename T>
-auto intersects(
-    point2d<T> const p
-  , circle<T> const  c
-) BK_NOEXCEPT -> bool {
+bool intersects(point2d<T> const p, circle<T> const  c) BK_NOEXCEPT {
     return intersects(c, p);
 }
 //==============================================================================
 //! axis_aligned_rect <-> circle intersection.
 //==============================================================================
 template <typename T>
-auto intersects(
-    axis_aligned_rect<T> const r
-  , circle<T>            const c
-) BK_NOEXCEPT -> bool {
+bool intersects(axis_aligned_rect<T> const r, circle<T> const c) BK_NOEXCEPT {
     return intersects(bounding_circle<T>(r), c) && (
         intersects(c, r.top_left())
      || intersects(c, r.top_right())
@@ -724,20 +677,14 @@ auto intersects(
 //! circle <-> axis_aligned_rect intersection.
 //==============================================================================
 template <typename T>
-auto intersects(
-    circle<T>            const c
-  , axis_aligned_rect<T> const r
-) BK_NOEXCEPT -> bool {
+bool intersects(circle<T> const c, axis_aligned_rect<T> const r) BK_NOEXCEPT {
     return intersects(r, c);
 }
 //==============================================================================
 //! axis_aligned_rect <-> axis_aligned_rect intersection.
 //==============================================================================
 template <typename T>
-bool intersects(
-    axis_aligned_rect<T> const ra
-  , axis_aligned_rect<T> const rb
-) BK_NOEXCEPT {
+bool intersects(axis_aligned_rect<T> const ra, axis_aligned_rect<T> const rb) BK_NOEXCEPT {
     return !(
         ra.right()  <= rb.left()
      || ra.bottom() <= rb.top()
@@ -749,10 +696,7 @@ bool intersects(
 //! axis_aligned_rect <-> point intersection.
 //==============================================================================
 template <typename T>
-bool intersects(
-    axis_aligned_rect<T> const r
-  , point2d<T>           const p
-) BK_NOEXCEPT {
+bool intersects(axis_aligned_rect<T> const r, point2d<T> const p) BK_NOEXCEPT {
     return !(
         p.x < r.left() || p.x >= r.right()
      || p.y < r.top()  || p.y >= r.bottom()
@@ -762,20 +706,14 @@ bool intersects(
 //! point <-> axis_aligned_rect intersection.
 //==============================================================================
 template <typename T>
-bool intersects(
-    point2d<T>           const p
-  , axis_aligned_rect<T> const r
-) BK_NOEXCEPT {
+bool intersects(point2d<T> const p, axis_aligned_rect<T> const r) BK_NOEXCEPT {
     return intersects(r, p);
 }
 //==============================================================================
 //! circle <-> circle intersection.
 //==============================================================================
 template <typename T>
-bool intersects(
-    circle<T> const a
-  , circle<T> const b
-) BK_NOEXCEPT {
+bool intersects(circle<T> const a, circle<T> const b) BK_NOEXCEPT {
     auto const dist = distance2(a.p, b.p);
     auto const r    = square_of(a.r + b.r);
 
@@ -789,36 +727,27 @@ bool intersects(
 //! axis_aligned_rect <-> axis_aligned_rect intersection result.
 //==============================================================================
 template <typename T>
-auto intersection_of(
-    axis_aligned_rect<T> const ra
-  , axis_aligned_rect<T> const rb
-) BK_NOEXCEPT
--> intersection_result<axis_aligned_rect<T>> {
+auto intersection_of(axis_aligned_rect<T> const ra, axis_aligned_rect<T> const rb) BK_NOEXCEPT {
     auto const l = std::max(ra.left(),   rb.left());
     auto const r = std::min(ra.right(),  rb.right());
     auto const t = std::max(ra.top(),    rb.top());
     auto const b = std::min(ra.bottom(), rb.bottom());
 
-    return {
+    using rect = axis_aligned_rect<T>;
+
+    return intersection_result<rect>{{
         (l < r) && (t < b)
-      , {axis_aligned_rect<T>::allow_malformed{}, l, t, r, b}
-    };   
+      , {rect::allow_malformed{}, l, t, r, b}
+    }};   
 }
 template <typename T>
-auto intersection_of(
-    axis_aligned_rect<T> const r
-  , point2d<T>           const p
-) BK_NOEXCEPT
--> intersection_result<point2d<T>> {
-    return {intersects{r, p}, p};
+auto intersection_of(axis_aligned_rect<T> const r, point2d<T> const p) BK_NOEXCEPT {
+    using type = intersection_result<point2d<T>>;
+    return type{intersects{r, p}, p};
 }
 //------------------------------------------------------------------------------
 template <typename T>
-auto intersection_of(  
-    point2d<T>           const p
-  , axis_aligned_rect<T> const r
-) BK_NOEXCEPT
--> intersection_result<point2d<T>> {
+auto intersection_of(point2d<T> const p, axis_aligned_rect<T> const r) BK_NOEXCEPT {
     return intersection_of(r, p);
 }
 //------------------------------------------------------------------------------
@@ -828,7 +757,7 @@ auto intersection_of(
 //! Generate a random direction vector.
 //==============================================================================
 template <typename T = float, typename F = void>
-vector2d<T> random_direction(F& random) {
+vector2d<T> random_direction(F& random) BK_NOEXCEPT {
     static float const pi2 = 2.0f * std::acos(0.0f);
 
     auto const angle = std::uniform_real_distribution<float>(0.0f, pi2)(random);
@@ -875,8 +804,7 @@ Result round_up_if_integral(Source const x) BK_NOEXCEPT {
 //! Return the circle that rect can be inscribed in.
 //==============================================================================
 template <typename R = float, typename T = void>
-auto bounding_circle(axis_aligned_rect<T> const rect)
--> circle<R> {
+circle<R> bounding_circle(axis_aligned_rect<T> const rect) BK_NOEXCEPT {
     auto const p = rect.center<float>();
     auto const q = to_type<float>(rect.top_left());
     auto const r = round_up_if_integral<R>(distance(p, q));
@@ -890,21 +818,21 @@ auto bounding_circle(axis_aligned_rect<T> const rect)
 template <typename T
   , enable_for_floating_point_t<T>* = 0 //floating point types.
 >
-T round_toward(T const n) {
+T round_toward(T const n) BK_NOEXCEPT {
     return n >= T{0} ? std::ceil(n) : std::floor(n);
 }
 //------------------------------------------------------------------------------
 template <typename T
   , enable_for_integral_t<T>* = 0 //integral types.
 >
-T round_toward(T const n) {
+T round_toward(T const n) BK_NOEXCEPT {
     return n;
 }
 //==============================================================================
 //! Rounds the vector @c v in its direction.
 //==============================================================================
 template <typename R, typename T>
-vector2d<R> round_toward(vector2d<T> const v) {
+vector2d<R> round_toward(vector2d<T> const v) BK_NOEXCEPT {
     auto const x = static_cast<R>(round_toward(v.x));
     auto const y = static_cast<R>(round_toward(v.y));
 
@@ -914,7 +842,7 @@ vector2d<R> round_toward(vector2d<T> const v) {
 //! Rounds the point @c p in the direction of @c v.
 //==============================================================================
 template <typename R, typename T, typename U>
-point2d<R> round_toward(point2d<T> const p, vector2d<U> const v) {
+point2d<R> round_toward(point2d<T> const p, vector2d<U> const v) BK_NOEXCEPT {
     auto const x = static_cast<R>(round_toward(p.x + v.x));
     auto const y = static_cast<R>(round_toward(p.y + v.y));
 
@@ -926,12 +854,9 @@ point2d<R> round_toward(point2d<T> const p, vector2d<U> const v) {
 //! distance between their perimeters.
 //==============================================================================
 template <typename T, typename U>
-auto separation_vector(
-    bklib::circle<T> const a
-  , bklib::circle<U> const b
-) -> vector2d<common_type_t<T, U>> {
-    auto const dir = bklib::direction(a.p - b.p);
-    auto const mag = -bklib::distance(a, b);
+vector2d<float> separation_vector(bklib::circle<T> const a, bklib::circle<U> const b) BK_NOEXCEPT {
+    auto const dir = bklib::direction<float>(a.p - b.p);
+    auto const mag = -bklib::distance<float>(a, b);
     return mag * dir;
 };
 

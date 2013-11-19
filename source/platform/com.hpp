@@ -7,8 +7,6 @@
 
 namespace bklib { namespace win {
 //------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 struct bstr_deleter {
     typedef BSTR pointer;
     void operator()(pointer s) const {
@@ -16,7 +14,7 @@ struct bstr_deleter {
     }
 };
 
-using bstr = std::unique_ptr<BSTR, bstr_deleter>;
+using bstr_ptr = std::unique_ptr<BSTR, bstr_deleter>;
 //------------------------------------------------------------------------------
 template <typename T>
 struct com_deleter {
@@ -69,7 +67,7 @@ template <typename T>
 com_ptr<T> make_com_ptr(T* ptr) {
     static_assert(std::is_convertible<T*, IUnknown*>::value, "must be a com object");
     BK_ASSERT(ptr != nullptr);
-    return com_ptr<T>(ptr);
+    return com_ptr<T> {ptr};
 }
 
 }} //namespace bklib::win

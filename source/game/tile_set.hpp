@@ -18,6 +18,11 @@ struct tile_variation {
 
     explicit tile_variation(json::cref value);
 
+    tile_variation(tile_variation const&) = delete;
+    tile_variation(tile_variation&&) = default;
+    tile_variation& operator=(tile_variation const&) = delete;
+    tile_variation& operator=(tile_variation&&) = default;;
+
     language_map name;
     language_map description;
     location_t   location;
@@ -29,6 +34,11 @@ struct tile_variation {
 struct tile_type {
     explicit tile_type(json::cref);
 
+    tile_type(tile_type const&) = delete;
+    tile_type(tile_type&&) = default;
+    tile_type& operator=(tile_type const&) = delete;
+    tile_type& operator=(tile_type&&) = default;;
+
     std::vector<tile_variation> variations;
 };
 //==============================================================================
@@ -36,6 +46,11 @@ struct tile_type {
 //==============================================================================
 struct tile_set {
     explicit tile_set(json::cref);
+
+    tile_set(tile_set const&) = delete;
+    tile_set(tile_set&&) = default;
+    tile_set& operator=(tile_set const&) = delete;
+    tile_set& operator=(tile_set&&) = default;;
 
     size_t                 size;
     utf8string             file_name;

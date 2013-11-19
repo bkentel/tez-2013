@@ -266,6 +266,8 @@ public:
             case VK_RCONTROL : return keys::CTRL_R;
             case VK_LMENU    : return keys::ALT_L;
             case VK_RMENU    : return keys::ALT_R;
+            case VK_LSHIFT   : return keys::SHIFT_L;
+            case VK_RSHIFT   : return keys::SHIFT_R;
 
             case VK_CONTROL  : return is_e0 ? keys::CTRL_R    : keys::CTRL_L;
             case VK_MENU     : return is_e0 ? keys::ALT_R     : keys::ALT_L;
@@ -290,9 +292,6 @@ public:
 
             return keys::NONE;
         }();
-
-        // set the extended bit
-//        auto const final_scancode = is_e0 ? scancode | 0x100 : scancode;
 
         return {scancode, key, went_down, false};
     }

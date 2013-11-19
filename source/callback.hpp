@@ -1,34 +1,49 @@
 #pragma once
 
 #include <functional>
+#include <type_traits>
 
 namespace bklib {
 
-template <typename Id, typename Sig>
+template <typename R, typename... Args>
+struct function_return_type;
+
+template <typename R, typename... Args>
+struct function_return_type<R (Args...)> {
+    using type = R;
+};
+
+template <typename T>
+using function_return_type_t = typename function_return_type<T>::type;
+
+template <typename Tag, typename Signature>
 struct callback {
+    static_assert(
+        std::is_void<function_return_type_t<Signature>>::value
+      , "callbacks must return void"
+    );
+
     callback() = default;
+    callback(callback const&) = default;
+    callback(callback&&) = default;
+    callback& operator=(callback const&) = default;
+    callback& operator=(callback&&) = default;
 
     template <typename F>
-    callback(F function) : value {function} {}
+    callback(F&& function) : value{std::forward<F>(function)} {}
 
     template <typename F>
-    callback& operator=(F function) {
-        value = std::move(function);
+    callback& operator=(F&& function) {
+        value = std::forward<F>(function);
         return *this;
     }
 
-    callback& operator=(callback&& other) {
+    //--------------------------------------------------------------------------
+    void swap(callback& other) BK_NOEXCEPT {
         using std::swap;
-
         swap(value, other.value);
-
-        return *this;
     }
-
-    template <typename... Args>
-    void operator()(Args&&... args) {
-        value(std::forward<Args>(args)...);
-    }
+    //--------------------------------------------------------------------------
 
     template <typename... Args>
     void operator()(Args&&... args) const {
@@ -39,7 +54,7 @@ struct callback {
         return !!value;
     }
 
-    std::function<Sig> value;
+    std::function<Signature> value;
 };
 
 } //namespace bklib

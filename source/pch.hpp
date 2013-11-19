@@ -63,11 +63,14 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <boost/predef.h>
 #include <boost/exception/all.hpp>
 #include <boost/container/flat_map.hpp>
 
 #include <jsoncpp/json.h>
-#pragma comment(lib, "jsoncpp_mtd.lib")
+#if defined(BOOST_COMP_MSVC)
+#   pragma comment(lib, "jsoncpp_mtd.lib")
+#endif
 
 #include "config.hpp"
 
@@ -76,4 +79,3 @@
 #include "types.hpp"
 #include "assert.hpp"
 #include "scope_exit.hpp"
-

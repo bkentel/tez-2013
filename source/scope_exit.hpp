@@ -13,8 +13,8 @@ struct scope_exit {
         canceled = true;
     }
 
-    bool canceled;
     F f;
+    bool canceled;
 };
 
 template <typename F>

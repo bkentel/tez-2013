@@ -8,8 +8,8 @@
 
 namespace bklib { namespace json {
 
-using cref    = Json::Value const&;
 using value_t = Json::Value;
+using cref    = Json::Value const&;
 using field_t = utf8string const&;
 
 struct error : virtual exception_base {};

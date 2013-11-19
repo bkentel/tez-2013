@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <memory>
 
-#include <platform/platform_windows.hpp>
+#include "platform/platform.hpp"
 
 #include "config.hpp"
 #include "com.hpp"

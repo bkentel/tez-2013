@@ -12,6 +12,8 @@
 #include "game/languages.hpp"
 #include "game/tile_set.hpp"
 
+#include "keyboard.hpp"
+
 //using pseudo_random_t = std::mt19937;
 //using true_random_t = std::random_device;
 //
@@ -597,10 +599,6 @@ using bklib::utf8string;
 //    utf8string variety;
 //};
 ////----------------------------------------
-
-
-
-
 
 void main()
 try {

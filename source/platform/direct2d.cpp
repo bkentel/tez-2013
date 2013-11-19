@@ -1,9 +1,6 @@
 #include "pch.hpp"
 #include "direct2d.hpp"
 
-#pragma comment(lib, "D2d1.lib")
-#pragma comment(lib, "Windowscodecs.lib")
-
 using namespace bklib::win;
 
 #define BK_THROW_IF_FAILED_COM(function, hresult)\

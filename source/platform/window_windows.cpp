@@ -4,8 +4,6 @@
 #include "ime_windows.hpp"
 #include "com.hpp"
 
-#pragma comment(lib, "Imm32.lib")
-
 #define BK_WM_ASSOCIATE_TSF (WM_APP + 1)
 
 using window = bklib::platform_window::impl_t_;
@@ -330,26 +328,6 @@ get_mouse_record(
 } //namespace
 
 //------------------------------------------------------------------------------
-namespace {
-static int translate_key(bklib::keys const key) BK_NOEXCEPT {
-    switch (key) {
-    case bklib::keys::K0 : return '0';
-    case bklib::keys::K1 : return '1';
-    case bklib::keys::K2 : return '2';
-    case bklib::keys::K3 : return '3';
-    case bklib::keys::K4 : return '4';
-    case bklib::keys::K5 : return '5';
-    case bklib::keys::K6 : return '6';
-    case bklib::keys::K7 : return '7';
-    case bklib::keys::K8 : return '8';
-    case bklib::keys::K9 : return '9';
-    }
-
-    return 0;
-}
-} //namespace
-
-//------------------------------------------------------------------------------
 LRESULT window::local_wnd_proc_(
     UINT   const uMsg
   , WPARAM const wParam
@@ -486,6 +464,11 @@ LRESULT window::local_wnd_proc_(
 
     switch (uMsg) {
     default :
+        break;
+    case WM_SETFOCUS :
+        break;
+    case WM_KILLFOCUS :
+        keyboard_state_.clear(on_keyup_);
         break;
     case WM_MOUSEHWHEEL:
     case WM_MOUSEWHEEL :
