@@ -1,6 +1,20 @@
 #pragma once
 
+#include "types.hpp"
+
 namespace bklib {
+
+inline size_t utf8string_hash(char const* str) BK_NOEXCEPT {
+    size_t result {5381};
+    while (*str) {
+        result = result * 33 ^ *str++;
+    }
+    return result;
+}
+
+inline size_t utf8string_hash(utf8string const& str) BK_NOEXCEPT {
+    return utf8string_hash(str.c_str());
+}
 
 template <typename T, size_t N = sizeof(T)> struct print_size_of;
 template <typename T> struct print_type_of;

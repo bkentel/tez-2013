@@ -214,18 +214,3 @@ TEST(Math, AARectIntersectionsInvalid) {
     ASSERT_FALSE(intersects(r, r2));
     ASSERT_FALSE(intersects(r, r3));
 }
-
-#include "keyboard.hpp"
-
-TEST(Keyboard, Combo) {
-    using namespace bklib;
-
-    key_combo const combo1 = {keys::SHIFT_L, keys::A};
-    key_combo const combo2 = {keys::SHIFT_L, keys::B};
-
-    ASSERT_NE(combo1, combo2);
-
-    auto const combo3 = combo1;
-
-    ASSERT_EQ(combo1, combo3);
-}

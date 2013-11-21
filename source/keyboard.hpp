@@ -27,6 +27,7 @@ enum class game_command {
 //==============================================================================
 enum class keys : uint8_t {
     NONE
+  , SPACE = ' '
   , K0 = '0', K1, K2, K3, K4, K5, K6, K7, K8, K9
   , A  = 'A', B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
   , NUM_0, NUM_1, NUM_2, NUM_3, NUM_4, NUM_5, NUM_6, NUM_7, NUM_8, NUM_9
@@ -64,20 +65,37 @@ public:
         std::sort(std::begin(keys_), std::end(keys_), pred{});
     }    
 
-    void add(key_t const k) {
+    bool add(key_t const k) {
         auto it = std::lower_bound(std::begin(keys_), std::end(keys_), k, pred{});
-        BK_ASSERT(it == std::end(keys_) || *it != k);
+        if (it != std::end(keys_) && *it == k) {
+            return false;
+        }
 
         auto distance = std::distance(std::begin(keys_), it);
         keys_.emplace_back(k);
         std::sort(std::begin(keys_) + distance, std::end(keys_), pred{});
+
+        return true;
     }
 
-    void remove(key_t const k) {
+    bool add(std::initializer_list<key_t> const list) {
+        bool result = false;
+
+        for (auto k : list) {
+            result |= add(k);
+        }
+
+        return result;
+    }
+
+    bool remove(key_t const k) {
         auto it = std::lower_bound(std::begin(keys_), std::end(keys_), k, pred{});
-        BK_ASSERT(*it == k);
+        if (it == std::end(keys_) || *it != k) {
+            return false;
+        }
 
         keys_.erase(it);
+        return true;
     }
 
     bool operator==(key_combo const& rhs) const {
@@ -97,9 +115,21 @@ public:
         );
     }
 
+    auto size() const { return keys_.size(); }
+    auto empty() const { return keys_.empty(); }
+
     void clear() {
         keys_.clear();
     }
+
+    auto begin() { return keys_.begin(); }
+    auto end() { return keys_.end(); }
+
+    auto begin() const { return keys_.begin(); }
+    auto end() const { return keys_.end(); }
+
+    auto cbegin() const { return keys_.cbegin(); }
+    auto cend() const { return keys_.cend(); }
 
     friend std::ostream& operator<<(std::ostream& out, key_combo const& combo);
 private:
@@ -130,6 +160,8 @@ public:
     };
 
     static utf8string const& key_name(key_t k);
+    static key_t key_code(utf8string const& name);
+    static key_t key_code(hash hash);
 
     keyboard();
 

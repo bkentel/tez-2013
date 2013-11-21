@@ -28,14 +28,4 @@ namespace bklib {
     using platform_string = std::basic_string<char>;
 #endif
     using invocable = std::function<void()>;
-
-
-static size_t utf8string_hash(char const* str) BK_NOEXCEPT {
-    size_t result {5381};
-    while (*str) {
-        result = result * 33 ^ *str++;
-    }
-    return result;
-}
-
 } //namespace bklib

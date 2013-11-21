@@ -68,6 +68,18 @@ utf8string const& kb::key_name(key_t k) {
     return it != std::cend(key_string_map) ? it->second : NOT_FOUND;
 }
 
+bklib::keys kb::key_code(utf8string const& name) {
+    return key_code(bklib::utf8string_hash(name));
+}
+
+bklib::keys kb::key_code(hash const hash) {
+    std::call_once(maps_flag, init_maps);
+
+    auto it = hash_key_map.find(hash);
+    return it != std::cend(hash_key_map) ? it->second : keys::NONE;
+}
+
+
 kb::keyboard() {
     record const r = {clock::now(), false};
     std::fill(std::begin(state_), std::end(state_), r);
@@ -87,7 +99,7 @@ bool kb::set_state(key_t const k, bool const is_down) {
         keys_.remove(k);
     }
 
-    std::cout << keys_ << std::endl;
+    //std::cout << keys_ << std::endl;
 
     return false;
 }
