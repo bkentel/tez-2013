@@ -1,27 +1,10 @@
 #pragma once
 
 #include "types.hpp"
-#include "json.hpp"
 #include "callback.hpp"
 #include "util.hpp"
 
 namespace bklib {
-
-enum class game_command {
-    none
-  , use
-  , dir_north_west
-  , dir_north
-  , dir_north_east
-  , dir_west
-  , dir_here
-  , dir_east
-  , dir_south_west
-  , dir_south
-  , dir_south_east
-};
-
-
 //==============================================================================
 //! Keyboard keys; roughly aligned with ASCII codes.
 //==============================================================================
@@ -177,11 +160,5 @@ private:
     key_combo keys_;
     std::array<record, 0xFF> state_;
 };
-
-struct hotkeys {
-    using code_t = bklib::keys;
-
-};
-
 
 } //namespace bklib

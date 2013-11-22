@@ -205,6 +205,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <FileType>Document</FileType>
     </None>
+    <ClInclude Include="source\game\hotkeys.hpp" />
     <ClInclude Include="source\keyboard.hpp" />
     <ClInclude Include="source\game\room.hpp" />
     <ClInclude Include="source\json.hpp" />
@@ -228,6 +229,7 @@
     <ClInclude Include="source\window.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\game\hotkeys.cpp" />
     <ClCompile Include="source\keyboard.cpp" />
     <ClCompile Include="source\game\room.cpp" />
     <ClCompile Include="source\json.cpp" />
