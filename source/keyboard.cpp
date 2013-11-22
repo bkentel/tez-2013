@@ -54,6 +54,8 @@ namespace {
 
         BK_ADD_KEY_HASH(KEY::LEFT); BK_ADD_KEY_HASH(KEY::RIGHT);
         BK_ADD_KEY_HASH(KEY::UP);   BK_ADD_KEY_HASH(KEY::DOWN);
+
+        BK_ADD_KEY_HASH(KEY::SPACE);
     }
 
     #undef BK_ADD_KEY_HASH
@@ -119,19 +121,4 @@ void kb::clear(on_keyup const& f) {
         code++;
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// bklib::hotkeys
-////////////////////////////////////////////////////////////////////////////////
-
-using hk = ::bklib::hotkeys;
-
-namespace {
-    void init_key_mappings() {
-        using namespace bklib;
-
-        static const bklib::utf8string FILE_NAME = "./data/bindings.def";
-    }
-
-} //namespace
 

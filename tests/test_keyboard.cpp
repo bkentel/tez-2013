@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include "keyboard.hpp"
 
+#include "game/hotkeys.hpp"
+
 TEST(Keyboard, Mappings) {
     using namespace bklib;
 
@@ -67,4 +69,14 @@ TEST(Keyboard, Combo) {
     ASSERT_EQ(combo1, combo3);
     ASSERT_EQ(combo2, combo3);
     ASSERT_EQ(combo3, combo3);
+}
+
+TEST(Hotkeys, Combo) {
+    using namespace tez;
+
+    bklib::key_combo combo {bklib::keys::LEFT};
+
+    auto command = hotkeys::translate(combo);
+
+    ASSERT_EQ(command, tez::game_command::DIR_WEST);
 }
