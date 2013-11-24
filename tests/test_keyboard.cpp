@@ -147,7 +147,7 @@ TEST(Hotkeys, BadRoot) {
     std::stringstream stream {string};
 
     auto const handler = [](json::error::bad_index const& e) {
-        json::error::dump_exception(e);
+        std::cout << e;
 
         auto const expected = boost::get_error_info<json::error::info_expected_type>(e);
         auto const actual   = boost::get_error_info<json::error::info_actual_type>(e);

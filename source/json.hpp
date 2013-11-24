@@ -15,14 +15,7 @@ using field_t = utf8string const&;
 using index_t = boost::variant<size_t, utf8string>;
 
 namespace detail {
-    static utf8string const type_strings[] = {
-        {"null"}, {"int"}, {"uint"}, {"float"}, {"string"}
-      , {"bool"}, {"array"}, {"object"}
-    };
-
-    inline utf8string const& get_type_string(Json::ValueType const type) {
-        return detail::type_strings[static_cast<size_t>(type)];
-    }
+    utf8string const& get_type_string(Json::ValueType type);
 
     struct tag_info_expected_type;
     struct tag_info_actual_type;
@@ -49,30 +42,7 @@ namespace error {
     using info_index         = boost::error_info<detail::tag_info_index,         index_t>;
     using info_location      = boost::error_info<detail::tag_info_location,      utf8string>;
 
-    inline void dump_exception(base const& e) {
-        std::cout << "json exception (" << typeid(e).name() << ")";
-
-        if (auto const ptr = boost::get_error_info<info_expected_type>(e)) {
-            std::cout << "\n  expected type = " << *ptr;
-        }
-        if (auto const ptr = boost::get_error_info<info_actual_type>(e)) {
-            std::cout << "\n  actual type   = " << *ptr;
-        }
-        if (auto const ptr = boost::get_error_info<info_expected_size>(e)) {
-            std::cout << "\n  expected size = " << *ptr;
-        }
-        if (auto const ptr = boost::get_error_info<info_actual_size>(e)) {
-            std::cout << "\n  actual size   = " << *ptr;
-        }
-        if (auto const ptr = boost::get_error_info<info_index>(e)) {
-            std::cout << "\n  index         = " << *ptr;
-        }
-        if (auto const ptr = boost::get_error_info<info_location>(e)) {
-            std::cout << "\n  location      = " << *ptr;
-        }
-
-        std::cout << std::endl;
-    }
+    std::ostream& operator<<(std::ostream& out, base const& e);
 
     inline bad_type make_type_info(
         Json::ValueType const expected
@@ -224,148 +194,43 @@ inline value_t required_array(
     return required_array(value[field], min_size, max_size);
 }
 
-struct input_stack {
+class input_stack {
+public:
     using pointer_t = Json::Value const*;
     using record_t  = std::pair<index_t, pointer_t>;
 
-    explicit input_stack(std::istream& in) {
-        if (!in) {
-            BK_DEBUG_BREAK(); //TODO
-        }
+    explicit input_stack(std::istream& in);
 
-        Json::Reader json_reader;
-        if (!json_reader.parse(in, root)) {
-            BK_DEBUG_BREAK(); //TODO
-        }
-
-        current = &root;
-        stack.emplace_back(record_t{"root", current});
+    explicit input_stack(std::istream&& in)
+      : input_stack(in)
+    {
     }
-
-    explicit input_stack(std::istream&& in) : input_stack(in) {}
 
     explicit input_stack(utf8string const& filename)
-        : input_stack(std::ifstream{filename})
+      : input_stack(std::ifstream{filename})
     {
-    }  
-
-    struct visitor : public boost::static_visitor<pointer_t> {
-        pointer_t ptr;
-
-        visitor(pointer_t ptr) : ptr{ptr} {}
-
-        void check(size_t i) const {
-            if (!ptr->isArray()) {
-                BOOST_THROW_EXCEPTION(
-                    error::make_type_info(Json::arrayValue, ptr->type())
-                );
-            } else if (i >= ptr->size()) {
-                BOOST_THROW_EXCEPTION(error::bad_index{});
-            }
-        }
-
-        void check(utf8string const& i) const {
-            if (!ptr->isObject()) {
-                BOOST_THROW_EXCEPTION(
-                    error::make_type_info(Json::objectValue, ptr->type())
-                );
-            } else if (!ptr->isMember(i)) {
-                BOOST_THROW_EXCEPTION(error::bad_index{});
-            }
-        }
-
-        template <typename T>
-        pointer_t step_into(T const& i) const {
-            try {
-                check(i);
-            } catch (error::base& e) {
-                e << error::info_index{i};
-                throw;
-            }
-
-            return &(*ptr)[i];
-        }
-
-        pointer_t operator()(utf8string const& i) const { return step_into(i); }
-        pointer_t operator()(size_t i) const { return step_into(i); }
-    };
-
-    pointer_t get_index_(index_t const& index) const {
-        try {
-            return boost::apply_visitor(visitor{current}, index);
-        } catch (error::base& e) {
-            std::stringstream location;
-            location << *this;
-            e << error::info_location(location.str());     
-            throw;
-        }
     }
 
-    input_stack& step_into(index_t const& index) {
-        auto const ptr = get_index_(index);
+    input_stack& step_into(index_t const& index);
 
-        stack.emplace_back(record_t{index, ptr});
-        current = ptr;
+    input_stack& step_out();
 
-        BOOST_LOG_TRIVIAL(trace) << "json: location = " << *this;
-
-        return *this;
-    }
-
-    input_stack& step_out() {
-        if (stack.size() == 1) {
-            BOOST_LOG_TRIVIAL(error) << "json: at root";
-            BOOST_THROW_EXCEPTION(error::bad_type()); //TODO
-        }
-
-        stack.pop_back();
-        current = stack.back().second;
-
-        BOOST_LOG_TRIVIAL(trace) << "json: location = " << *this;
-
-        return *this;
-    }
-
-    utf8string require_string(index_t const& index) const {
-        auto const ptr = get_index_(index);
-        if (!ptr->isString()) {
-            BOOST_THROW_EXCEPTION(
-                error::make_type_info(Json::stringValue, ptr->type())
-            );        
-        }
-
-        return ptr->asString();
-    }
+    utf8string require_string(index_t const& index) const;
 
     size_t size() const {
-        return current->size();
+        return current_->size();
     }
 
-    friend std::ostream& operator<<(std::ostream& lhs, input_stack const& rhs) {
-        struct output_visitor : public boost::static_visitor<void> {
-            std::ostream& out;
-            output_visitor(std::ostream& out) : out{out} {}
+    friend std::ostream& operator<<(std::ostream& lhs, input_stack const& rhs);
+private:
+    pointer_t get_index_(index_t const& index) const;
 
-            void operator()(utf8string const& i) const {
-                out << "{" << i << "}";
-            }
-            void operator()(size_t i) const {
-                out << "[" << i << "]";
-            }
-        };
-
-        for (auto const& record : rhs.stack) {
-            boost::apply_visitor(output_visitor{lhs}, record.first);
-        }
-
-        return lhs;
-    }
-
-    Json::Value           root;
-    pointer_t             current;
-    std::vector<record_t> stack;
+    Json::Value           root_;
+    pointer_t             current_;
+    std::vector<record_t> stack_; 
 };
 
+std::ostream& operator<<(std::ostream& lhs, input_stack const& rhs);
 
 } //namespace json
 } //namespace bklib

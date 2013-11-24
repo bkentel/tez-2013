@@ -2,6 +2,12 @@
 
 #include "types.hpp"
 
+#define BK_DELETE_ALL(name)\
+name(name const&) = delete;\
+name(name&&) = delete;\
+name& operator=(name const&) = delete;\
+name& operator=(name&&) = delete
+
 namespace bklib {
 
 inline size_t utf8string_hash(char const* str) BK_NOEXCEPT {
