@@ -94,7 +94,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <CompileAs>CompileAsCpp</CompileAs>
       <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
@@ -103,9 +103,10 @@
       <CompileAsManaged>false</CompileAsManaged>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalOptions>/Zc:rvalueCast  -Zm500 /Zm500</AdditionalOptions>
+      <AdditionalOptions>/Zc:rvalueCast</AdditionalOptions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <DisableSpecificWarnings>4714</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -120,7 +121,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <CompileAs>CompileAsCpp</CompileAs>
       <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
@@ -129,8 +130,9 @@
       <CompileAsManaged>false</CompileAsManaged>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalOptions>/Zc:rvalueCast  -Zm500 /Zm500</AdditionalOptions>
+      <AdditionalOptions>/Zc:rvalueCast</AdditionalOptions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4714</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,7 +150,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <CompileAs>CompileAsCpp</CompileAs>
       <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
@@ -156,7 +158,8 @@
       <CompileAsManaged>false</CompileAsManaged>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalOptions>/Zc:rvalueCast  -Zm500 /Zm500</AdditionalOptions>
+      <AdditionalOptions>/Zc:rvalueCast</AdditionalOptions>
+      <DisableSpecificWarnings>4714</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -172,7 +175,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;STRICT;NTDDI_VERSION=0x06010000;_WIN32_WINNT=0x0601;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <CompileAs>CompileAsCpp</CompileAs>
       <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
@@ -180,7 +183,8 @@
       <CompileAsManaged>false</CompileAsManaged>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalOptions>/Zc:rvalueCast  -Zm500 /Zm500</AdditionalOptions>
+      <AdditionalOptions>/Zc:rvalueCast</AdditionalOptions>
+      <DisableSpecificWarnings>4714</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -246,10 +250,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug Test|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release Test|Win32'">Create</PrecompiledHeader>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug Test|Win32'">/Zm200 -Zm200 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release Test|Win32'">/Zm200 -Zm200 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">/Zm200 -Zm200 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">/Zm200 -Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ClCompile Include="source\platform\direct2d.cpp" />
     <ClCompile Include="source\platform\window_windows.cpp" />

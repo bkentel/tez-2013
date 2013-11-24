@@ -135,6 +135,8 @@ public:
     BK_DECLARE_EVENT(on_keyup,     void (keyboard& state, key_t k));
     BK_DECLARE_EVENT(on_keyrepeat, void (keyboard& state, key_t k));
 
+    static utf8string const INVALID_KEY_NAME;
+
     struct record {
         time_point time;    //!<< Time stamp of when the keystate changed.
         bool       is_down; //!<< The key is down.

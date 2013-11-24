@@ -63,14 +63,20 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <boost/predef.h>
-#include <boost/exception/all.hpp>
-#include <boost/container/flat_map.hpp>
+#pragma warning(push, 3)
 
-#include <jsoncpp/json.h>
-#if defined(BOOST_COMP_MSVC)
-#   pragma comment(lib, "jsoncpp_mtd.lib")
-#endif
+    #include <boost/predef.h>
+    #include <boost/exception/all.hpp>
+    #include <boost/container/flat_map.hpp>
+    #include <boost/log/trivial.hpp>
+    #include <boost/variant.hpp>
+
+    #include <jsoncpp/json.h>
+    #if defined(BOOST_COMP_MSVC)
+    #   pragma comment(lib, "jsoncpp_mtd.lib")
+    #endif
+
+#pragma warning(pop)
 
 #include "config.hpp"
 

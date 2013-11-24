@@ -1,31 +1,38 @@
 #include "pch.hpp"
 #include "hotkeys.hpp"
 
-using hk = tez::hotkeys;
 using namespace bklib;
+using namespace tez;
+
+utf8string const tez::hotkeys::DEFAULT_FILE_NAME = {"./data/bindings.def"};
 
 namespace {
+namespace local_state {
+//------------------------------------------------------------------------------
+template <typename K, typename V>
+using flat_map = boost::container::flat_map<K, V>;
 
-std::once_flag once_flag;
+singleton_flag initialized;
 
-boost::container::flat_map<bklib::key_combo, tez::game_command> hotkeys_map;
-boost::container::flat_map<bklib::hash, tez::game_command> hash_command_map;
-
+flat_map<key_combo, game_command> combo_to_command;
+flat_map<hash,      game_command> hash_to_command;
+//------------------------------------------------------------------------------
 #define BK_ADD_COMMAND_STRING(CMD)\
 [] {\
     auto const hash = bklib::utf8string_hash(#CMD);\
-    auto const result = hash_command_map.insert(std::make_pair(hash, CMD));\
+    auto const result = hash_to_command.insert(std::make_pair(hash, CMD));\
     BK_ASSERT(result.second && "collision");\
 }()
 
 void init_command_strings() {
+    BOOST_LOG_TRIVIAL(trace) << "initializing command strings.";
+
+    BK_ASSERT(combo_to_command.empty() && hash_to_command.empty());
+
     using COMMAND = tez::game_command;
 
-    BK_ASSERT(hotkeys_map.size() == 0);
-    BK_ASSERT(hash_command_map.size() == 0);
-
-    hash_command_map.reserve(static_cast<size_t>(COMMAND::SIZE));
-    hotkeys_map.reserve(static_cast<size_t>(COMMAND::SIZE));
+    auto const size = static_cast<size_t>(COMMAND::SIZE);
+    hash_to_command.reserve(size);
 
     BK_ADD_COMMAND_STRING(COMMAND::USE);
     BK_ADD_COMMAND_STRING(COMMAND::DIR_NORTH_WEST);
@@ -40,97 +47,124 @@ void init_command_strings() {
 }
 
 #undef BK_ADD_COMMAND_STRING
-
-tez::game_command get_command_from_string(utf8string const& name) {
-    auto const hash = utf8string_hash(name);
-    auto it = hash_command_map.find(hash);
-    return it != std::cend(hash_command_map)
-      ? it->second
-      : tez::game_command::NONE; 
+//------------------------------------------------------------------------------
+game_command command_from_hash(hash name) {
+    return find_or(local_state::hash_to_command, name, game_command::NONE);
 }
-
-bklib::key_combo make_combo(bklib::json::cref combo) {
-    json::required_array_t(combo);
+//------------------------------------------------------------------------------
+key_combo make_combo(json::input_stack& state) {
+    BOOST_LOG_TRIVIAL(trace) << "building combo";
 
     key_combo result;
 
-    for (json::cref key : combo) {
-        auto key_name = json::required_string_t(key);
-        auto key = keyboard::key_code(key_name);
+    for (size_t i = 0; i < state.size(); ++i) {
+        auto const name = state.require_string(i);
+        auto const key  = keyboard::key_code(name);
 
         if (key == keys::NONE) {
-            BK_DEBUG_BREAK(); //TODO
+            BOOST_LOG_TRIVIAL(warning) << "unknown key: " << name;
+        } else if (!result.add(key)) {
+            BOOST_LOG_TRIVIAL(warning) << "duplicate key: " << name << "; ignored";
         }
-
-        result.add(key);
     }
 
     return result;
 }
+//------------------------------------------------------------------------------
+void add_bindings(utf8string const& command_name, json::input_stack& state) {
+    BOOST_LOG_TRIVIAL(trace) << "adding bindings for command: " << command_name;
 
-void add_bindings(bklib::utf8string command_name, bklib::json::cref combo_list) {
-    json::required_array_t(combo_list);
-
-    auto command = get_command_from_string(command_name);
+    auto command = command_from_hash(utf8string_hash(command_name));
     if (command == tez::game_command::NONE) {
-        BK_DEBUG_BREAK(); //TODO
+        BOOST_LOG_TRIVIAL(warning) << "unknown command: " << command_name << "; ignored";
+        return;
     }
 
-    for (json::cref combo : combo_list) {
-        auto result = hotkeys_map.emplace(std::make_pair(make_combo(combo), command));
+    for (size_t i = 0; i < state.size(); ++i) {
+        auto combo = make_combo(state.step_into(i));
+        BK_SCOPE_EXIT({state.step_out();});
+
+        if (combo.size() == 0) {
+            BOOST_LOG_TRIVIAL(warning) << "no valid keys for command: " << command_name << "; ignored";
+            continue;
+        }
+
+        auto result = combo_to_command.emplace(
+            std::make_pair(std::move(combo), command)
+        );
+
         if (!result.second) {
-            BK_DEBUG_BREAK(); //TODO
+            BOOST_LOG_TRIVIAL(warning) << "duplicate combo for command: " << command_name << "; ignored";
         }
     }
 }
-
-void init_hotkeys() {
-    using namespace bklib;
-
-    BK_ASSERT(hash_command_map.size() != 0);
-
-    static utf8string const FILE_NAME = {"./data/bindings.def"};
+//------------------------------------------------------------------------------
+void init_hotkeys(std::istream& in) {
     static utf8string const ROOT_KEY = {"bindings"};
 
-    auto in = std::ifstream(FILE_NAME);
-    if (!in) {
-        BK_DEBUG_BREAK();
+    auto const command_count = static_cast<size_t>(game_command::SIZE);
+    combo_to_command.clear();
+    combo_to_command.reserve(command_count);
+
+    auto state = json::input_stack(in);
+    if (state.size() != 1) {
+       BOOST_LOG_TRIVIAL(warning) << "hotkeys: too many elements at root"; 
     }
 
-    Json::Value  json_root;
-    Json::Reader json_reader;
-    
-    if (!json_reader.parse(in, json_root)) {
-        //failed to parse the file
-        BK_DEBUG_BREAK();
-        std::cout << json_reader.getFormattedErrorMessages();
-    }
+    state.step_into(ROOT_KEY);
 
-    json::required_object_t(json_root);
-    json::cref bindings_list = json::required_array_t(json_root, json::at_index(ROOT_KEY));
+    for (size_t i = 0; i < state.size(); ++i) {
+        state.step_into(i);
+        BK_SCOPE_EXIT({state.step_out();});
 
-    for (json::cref binding : bindings_list) {
-        json::required_array_t(binding, json::at_index(), json::size_is{2});
-        
-        auto command_name = json::required_string_t(binding, json::at_index(0));
-        auto combo_list = json::required_array_t(binding, json::at_index(1));
+        if (state.size() != 2) {
+            BOOST_LOG_TRIVIAL(warning) << "hotkeys: too many elements."; 
+        }
 
-        add_bindings(command_name, combo_list);
+        auto command_string = state.require_string(0);
+
+        state.step_into(1);
+        BK_SCOPE_EXIT({state.step_out();});
+        add_bindings(command_string, state);
     }
 }
-
+//------------------------------------------------------------------------------
 void init() {
-    init_command_strings();
-    init_hotkeys();
-}
+    BOOST_LOG_TRIVIAL(trace) << "initializing hotkeys.";
 
+    init_command_strings();
+    initialized.initialized = true;
+    hotkeys::reload();
+}
+//------------------------------------------------------------------------------
+} //namespace local_state
 } //namespace
 
-tez::game_command hk::translate(key_combo const& combo) {
-    std::call_once(once_flag, init);
-
-    auto const result = hotkeys_map.find(combo);
-    return result != std::cend(hotkeys_map)
-      ? result->second
-      : game_command::NONE;
+//------------------------------------------------------------------------------
+void hotkeys::reload(utf8string const& file) {
+    std::ifstream in {file};
+    reload(in);
 }
+
+void hotkeys::reload(std::istream& in) {
+    if (!in) {
+        BK_DEBUG_BREAK(); //TODO
+    }
+
+    local_state::init_hotkeys(in);
+}
+
+game_command hotkeys::command_from_string(utf8string const& name) {
+    return command_from_hash(utf8string_hash(name));
+}
+
+game_command hotkeys::command_from_hash(hash name) {
+    if (!local_state::initialized) { local_state::init(); }
+    return local_state::command_from_hash(name);
+}
+
+game_command hotkeys::command_from_combo(key_combo const& combo) {
+    if (!local_state::initialized) { local_state::init(); }
+    return find_or(local_state::combo_to_command, combo, game_command::NONE);
+}
+//------------------------------------------------------------------------------

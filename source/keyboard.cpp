@@ -4,6 +4,8 @@
 using namespace bklib;
 using kb = bklib::keyboard;
 
+utf8string const keyboard::INVALID_KEY_NAME = {"UNKNOWN_KEY"};
+
 ////////////////////////////////////////////////////////////////////////////////
 // bklib::key_combo
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,12 +64,10 @@ namespace {
 } //namespace
 
 utf8string const& kb::key_name(key_t k) {
-    static utf8string const NOT_FOUND = {"UNKNOWN_KEY"};
-
     std::call_once(maps_flag, init_maps);
 
     auto it = key_string_map.find(k);
-    return it != std::cend(key_string_map) ? it->second : NOT_FOUND;
+    return it != std::cend(key_string_map) ? it->second : INVALID_KEY_NAME;
 }
 
 bklib::keys kb::key_code(utf8string const& name) {
@@ -90,7 +90,7 @@ kb::keyboard() {
 bool kb::set_state(key_t const k, bool const is_down) {
     auto const i = enum_value(k);
 
-    if (state_[i].is_down == is_down) return true;
+    if (state_[i].is_down && is_down) return true;
 
     state_[i].is_down = is_down;
     state_[i].time    = clock::now();
@@ -100,8 +100,6 @@ bool kb::set_state(key_t const k, bool const is_down) {
     } else {
         keys_.remove(k);
     }
-
-    //std::cout << keys_ << std::endl;
 
     return false;
 }
@@ -114,9 +112,10 @@ void kb::clear(on_keyup const& f) {
     code_t code = 0;
     for (auto& r : state_) {
         if (r.is_down) {
-            if (f) f(*this, static_cast<key_t>(code));
             r.is_down = false;
             r.time    = now;
+
+            if (f) f(*this, static_cast<key_t>(code));
         }
         code++;
     }
