@@ -1,8 +1,10 @@
 #include "pch.hpp"
 #include "languages.hpp"
 
-using namespace tez;
-namespace json = bklib::json;
+using bklib::utf8string;
+using tez::language_id;
+using tez::language_info;
+using tez::language_map;
 
 utf8string const language_info::FILE_NAME = R"(./data/language.def)";
 
@@ -26,89 +28,8 @@ static utf8string const FIELD_SUBSTITUTE = {"substitute"};
 static utf8string const FIELD_FALLBACK   = {"fallback"};
 static utf8string const FIELD_LANGUAGE   = {"language"};
 
-std::pair<utf8string, utf8string> language_pair(json::cref value) {
-    auto array = json::required_array(value, 2, 2);
-
-    auto result = std::make_pair(
-        json::required_string(array, 0)
-      , json::required_string(array, 1)
-    );
-
-    return result;
-}
 
 void init() {
-    using namespace bklib::json;
-
-    Json::Value  json_root;
-    Json::Reader json_reader;
-    
-    auto json_in = std::ifstream{language_info::FILE_NAME};
-    if (!json_in) {
-        //failed to open the file
-        BK_DEBUG_BREAK();
-    }
-
-    if (!json_reader.parse(json_in, json_root)) {
-        //failed to parse the file
-        BK_DEBUG_BREAK();
-        std::cout << json_reader.getFormattedErrorMessages();
-    }
-
-    if (required_string(json_root, FIELD_FILE_ID) != FIELD_LANGUAGE) {
-        //wrong file_id
-        BK_DEBUG_BREAK();
-    }
-
-    cref languages = required_array(json_root, FIELD_LANGUAGE);
-    lang_info.reserve(languages.size());
-
-    string_hasher hasher;
-    language_id   id = 1;
-
-    for (cref lang : languages) {
-        auto pair = language_pair(lang);
-        auto hash = hasher(pair.first);
-
-        auto const result = lang_info.emplace(
-            hash
-          , std::make_tuple(
-                id
-              , std::move(pair.first)
-              , std::move(pair.second)
-            )
-        );
-        
-        if (!result.second) {
-            //duplicate
-            BK_DEBUG_BREAK();
-        }
-
-        if (++id == INVALID_LANG_ID) {
-            //wrapped around
-            BK_DEBUG_BREAK();
-        }
-    }
-
-    lang_default_string    = optional_string(json_root[FIELD_DEFAULT], lang_default_string);
-    lang_fallback_string   = optional_string(json_root[FIELD_FALLBACK], lang_fallback_string);
-    lang_substitute_string = optional_string(json_root[FIELD_SUBSTITUTE], lang_substitute_string);
-
-    auto const end = lang_info.end();
-    
-    auto it = lang_info.find(hasher(lang_default_string));
-    if (it == end) {
-        //bad language
-        BK_DEBUG_BREAK();
-    }
-    lang_default_id = std::get<0>(it->second);
-
-    it = lang_info.find(hasher(lang_fallback_string));
-    if (it == end) {
-        //bad language
-        BK_DEBUG_BREAK();
-    }
-    lang_fallback_id = std::get<0>(it->second);
 }
 
 } //namespace
@@ -156,21 +77,7 @@ language_map::language_map(size_t const size)
 
 language_map::language_map(Json::Value const& json)
 {
-    using namespace bklib::json;
 
-    auto array = required_array(json);
-    for (cref lang : array) {
-        auto pair = language_pair(lang);
-
-        auto const& info = language_info::get_info(pair.first);
-        auto const  id   = std::get<0>(info);
-
-        if (id == INVALID_LANG_ID) {
-            BK_DEBUG_BREAK();
-        }
-
-        insert(id, std::move(pair.second));
-    }
 }
 
 utf8string const& language_map::operator[](language_id const id) const {

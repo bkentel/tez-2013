@@ -15,29 +15,29 @@ namespace {
     static utf8string const FIELD_COLOR_KEY   = {"color_key"};
     static utf8string const FIELD_TILES       = {"tiles"};
 
-    tile_variation::location_t required_location(json::cref value, json::field_t field) {
-        auto array = json::required_array(value, field, 2, 2);
-        auto const x = json::required_integer(array, 0);
-        auto const y = json::required_integer(array, 1);
-        return {x, y};
-    }
+    //tile_variation::location_t required_location(json::cref value, json::field_t field) {
+    //    auto array = json::required_array(value, field, 2, 2);
+    //    auto const x = json::required_integer(array, 0);
+    //    auto const y = json::required_integer(array, 1);
+    //    return {x, y};
+    //}
 }
 
-tile_variation::tile_variation(json::cref value)
-  : name{json::required_array(value, FIELD_NAME)}
-  , description{json::required_array(value, FIELD_DESCRIPTION)}
-  , location{required_location(value, FIELD_LOCATION)}
-  , weight{json::required_integer(value, FIELD_WEIGHT)}
-{
-    
-
-    auto val_name   = json::required_string( value, FIELD_NAME);
-    auto val_desc   = json::required_string( value, FIELD_DESCRIPTION);
-    auto val_loc    = json::required_array(  value, FIELD_LOCATION, 2, 2);
-    auto val_weight = json::required_integer(value, FIELD_WEIGHT);
-
-    
-}
+//tile_variation::tile_variation(json::cref value)
+//  : name{json::required_array(value, FIELD_NAME)}
+//  , description{json::required_array(value, FIELD_DESCRIPTION)}
+//  , location{required_location(value, FIELD_LOCATION)}
+//  , weight{json::required_integer(value, FIELD_WEIGHT)}
+//{
+//    
+//
+//    auto val_name   = json::required_string( value, FIELD_NAME);
+//    auto val_desc   = json::required_string( value, FIELD_DESCRIPTION);
+//    auto val_loc    = json::required_array(  value, FIELD_LOCATION, 2, 2);
+//    auto val_weight = json::required_integer(value, FIELD_WEIGHT);
+//
+//    
+//}
 
 //tile::tile(Json::Value const& json) {
 //    using namespace bklib::json;

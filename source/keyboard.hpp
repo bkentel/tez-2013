@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "callback.hpp"
 #include "util.hpp"
+#include "json_forward.hpp"
 
 namespace bklib {
 //==============================================================================
@@ -162,5 +163,18 @@ private:
     key_combo keys_;
     std::array<record, 0xFF> state_;
 };
+
+namespace json {
+namespace factory {
+    //==========================================================================
+    //! COMBO -> [KEY*]
+    //==========================================================================
+    key_combo make_key_combo(cref json_combo);
+    //==========================================================================
+    //! KEY -> string
+    //==========================================================================
+    keys make_key(cref json_key);
+} //namespace factory
+} //namespace json
 
 } //namespace bklib

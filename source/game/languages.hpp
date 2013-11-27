@@ -38,6 +38,35 @@ struct language_info {
     static utf8string  substitute();
 };
 //==============================================================================
+// ROOT -> {
+//    SUBSTITUTE
+//  , FALLBACK
+//  , DEFAULT
+//  , LANGUAGE_LIST
+// }
+// SUBSTITUTE -> string
+// FALLBACK -> string
+// DEFAULT -> string
+// LANGUAGE_LIST -> [LANGUAGE*]
+// LANGUAGE -> [LANGUAGE_NAME, LANGUAGE_STRING]
+// LANGUAGE_NAME -> string
+// LANGUAGE_STRING -> string
+//==============================================================================
+class languages_parser {
+public:
+    using cref = bklib::json::cref;
+
+    void rule_root(cref json_root);
+    void rule_substitute(cref json_substitute);
+    void rule_fallback(cref json_fallback);
+    void rule_default(cref json_default);
+    void rule_language_list(cref json_language_list);
+    void rule_language(cref json_language);
+    void rule_language_name(cref json_language_name);
+    void rule_language_string(cref json_language_string);
+private:
+};
+//==============================================================================
 //!
 //==============================================================================
 class language_map {

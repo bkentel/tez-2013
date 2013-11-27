@@ -30,6 +30,7 @@
     <ClInclude Include="source\keyboard.hpp" />
     <ClInclude Include="source\mouse.hpp" />
     <ClInclude Include="source\game\hotkeys.hpp" />
+    <ClInclude Include="source\json_forward.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\platform\window_windows.cpp" />

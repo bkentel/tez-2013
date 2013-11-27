@@ -1,5 +1,6 @@
 #include "pch.hpp"
 #include "keyboard.hpp"
+#include "json.hpp"
 
 using namespace bklib;
 using kb = bklib::keyboard;
@@ -121,3 +122,38 @@ void kb::clear(on_keyup const& f) {
     }
 }
 
+namespace json = ::bklib::json;
+
+bklib::key_combo json::factory::make_key_combo(cref json_combo) {   
+    json::require_array(json_combo);
+
+    bklib::key_combo result;
+
+    json::for_each_element_skip_on_fail(json_combo, [&](cref json_key){
+        auto const key   = json::factory::make_key(json_key);
+        auto const added = result.add(key);
+
+        if (!added) {
+            BOOST_LOG_TRIVIAL(warning)
+             << "ignored duplicate key."
+             << "key = " << json_key.asString()
+            ;
+        }
+    });
+
+    return result;
+}
+
+bklib::keys json::factory::make_key(cref json_key) {
+    auto const key_name = json::require_string(json_key);
+    auto const key      = keyboard::key_code(key_name);
+
+    if (key == keys::NONE) {
+        BOOST_LOG_TRIVIAL(warning)
+         << "unknown key name."
+         << "key = " << key_name
+        ;
+    }
+
+    return key;
+}
