@@ -80,4 +80,15 @@ private:
     storage_t value_;
 };
 
+//==============================================================================
+template <typename R, typename C, typename K>
+R const& find_or(C const& container, K const& key, R const& fallback) {
+    auto const it = container.find(key);
+
+    return it != std::cend(container)
+      ? it->second
+      : fallback;
+}
+
+
 } //namespace bklib

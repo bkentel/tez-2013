@@ -17,6 +17,7 @@ using uint32_t = ::std::uint32_t;
 using uint64_t = ::std::uint64_t;
 
 namespace bklib {
+    using string_ref    = boost::string_ref;
     using utf8string    = std::string;
     using string_hasher = std::hash<utf8string>;
     using hash          = string_hasher::result_type;

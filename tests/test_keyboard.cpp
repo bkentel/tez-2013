@@ -3,8 +3,6 @@
 #include <gtest/gtest.h>
 #include "keyboard.hpp"
 
-#include "game/hotkeys.hpp"
-
 using namespace bklib;
 
 //------------------------------------------------------------------------------
@@ -114,16 +112,51 @@ TEST(KeyCombo, ComboComparison) {
     ASSERT_FALSE(combo_b < combo_b);
 }
 //------------------------------------------------------------------------------
+//////////////////////////
+#include "game/hotkeys.hpp"
+#include "json.hpp"
 
 using namespace tez;
 //------------------------------------------------------------------------------
-TEST(HotkeysParser, Basic) {
-    char const json_string[] = R"({
-        "bindingz": []
-    })";
+TEST(HotkeysParser, FromFile) {
+    auto bindings = tez::bindings_parser("./data/bindings.def");
+    tez::bindings_parser::map_t map = std::move(bindings);
+
+    bklib::key_combo const combo {bklib::keys::LEFT};
+    auto it = map.find(combo);
+
+    ASSERT_NE(it, map.cend());
+    ASSERT_EQ(it->second, tez::game_command::DIR_WEST);
+}
+//------------------------------------------------------------------------------
+#define BK_ASSERT_THROWS_AND(expr, exception, check)\
+for (bool BK_ASSERT_THROWS_AND_passed = false; !BK_ASSERT_THROWS_AND_passed;) {\
+    try {\
+        expr;\
+    } catch (exception const& e) {\
+        check;\
+    } catch (...) {\
+    }\
+\
+    ASSERT_TRUE(BK_ASSERT_THROWS_AND_passed);\
+} []{}()
+
+TEST(HotkeysParser, BadRootKey) {
+    namespace error = bklib::json::error;
+
+    char const json_string[] = R"(
+        {
+            "bindingz": []
+        }
+    )";
 
     std::stringstream in {json_string};
 
-    auto bindings = tez::bindings_parser(in);
+    BK_ASSERT_THROWS_AND(tez::bindings_parser {in}, error::bad_index, {
+        auto const index = boost::get_error_info<error::info_index>(e);
+        ASSERT_NE(index, nullptr);
+
+        utf8string string = boost::get<utf8string>(*index);
+        ASSERT_STREQ("bindingz", string.c_str());
+    });
 }
-//------------------------------------------------------------------------------

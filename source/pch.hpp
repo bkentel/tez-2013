@@ -70,6 +70,7 @@
     #include <boost/container/flat_map.hpp>
     #include <boost/log/trivial.hpp>
     #include <boost/variant.hpp>
+    #include <boost/utility/string_ref.hpp>
 
     #include <jsoncpp/json.h>
     #if defined(BOOST_COMP_MSVC)
